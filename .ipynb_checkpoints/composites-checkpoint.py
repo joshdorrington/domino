@@ -18,12 +18,18 @@ def cat_occ_ds(ds,dim,reg_ds):
     return aggregate_ds(ds,dim,xr_reg_occurrence,s=reg_ds,coord_name='variable_cat_val')
 
 class LaggedAnalyser(object):
+    """Analysis of lagged composites defined with respect to a categorical event series"""
     
-    def __init__(self,event,variables=None,variable_name=None,variable_is_categorical=None):
-        """
-        event (xarray.DataArray): Assumed to contain a single coordinate and have only 2 unique values (a binary event series)
-        variables (Union[xarray.Dataset,xarray.DataArray,dict,None]): variables of the event, stored in an xarray.Dataset. If dict must be a dict of DataArrays. If None, variables must be later added using PrecursorAnalyser.add_variable.
-        is_categorical (dict): An optional dictionary declaring whether each DataArray in variables contains a categorical (1) or continuous (0) variable. If a variable is not in is_categorical it is assumed to be continuous, unless the DataAarray contains an 'is_categorical' key is in its DataArray.attrs.
+    def __init__(self,event,variables=None,name=None,is_categorical=None):
+        """Create a LaggedAnalyser object.
+        
+        **Arguments:**
+        *event*
+            An xarray.DataArray with one dimension taking on categorical values, each defining a class of event (or non-event).
+            
+        **Optional arguments**
+        *variables*,*name*,*is_categorical*
+            Arguments for adding variables to the LaggedAnalyser. Identical behaviour to calling add_variables directly.
         """
         
         #event is a dataarray
@@ -33,7 +39,7 @@ class LaggedAnalyser(object):
         #or passed as a DataArray, a Dataset or as a dict of DataArrays
         self.variables=xr.Dataset(coords=event.coords)
         if variables is not None:
-            self.add_variable(variables,variable_name,variable_is_categorical,False)
+            self.add_variable(variables,name,is_categorical,False)
         
         #Time lagged versions of the dataset self.variables will be stored here, with a key
         #equal to the lag applied. Designed to be accessed by the self.lagged_variables function
@@ -85,30 +91,75 @@ class LaggedAnalyser(object):
             self.variables[name].attrs['is_categorical']=is_categorical
        
     
-    def add_variable(self,new_var,name=None,is_categorical=None,overwrite=False,join_type='outer'):
+    def add_variable(self,variables,name=None,is_categorical=None,overwrite=False,join_type='outer'):
+        """Adds an additional variable to LaggedAnalyser.variables.
         
-        if isinstance(new_var,dict):
+        **Arguments**
+        
+        *variables* 
+            An xarray.DataArray, xarray.Dataset or dictionary of xarray.DataArrays, containing data to be composited with respect to *event*. One of the coordinates of *variables* should have the same name as the coordinate of *events*. Stored internally as an xarray.Dataset. If a dictionary is passed, the DataArrays are joined according to the method 'outer'.
+            
+        **Optional Arguments**
+        
+        *name* 
+            A string. If *variables* is a single xarray.DataArray then *name* will be used as the name of the array in the LaggedAnalyser.variables DataArray. Otherwise ignored.
+        
+        *is_categorical* 
+            An integer, if *variables* is an xarray.DataArray, or else a dictionary of integers with keys corresponding to DataArrays in the xarray.Dataset/dictionary. 0 indicates that the variable is continuous, and 1 indicates that it is categorical. Note that continuous and categorical variables are by default composited differently (see LaggedAnalyser.compute_composites). Default assumption is all DataArrays are continuous, unless a DataAarray contains an 'is_categorical' key in its DataArray.attrs, in which case this value is used.
+            
+        *overwrite*
+            A boolean. If False then attempts to assign a variable who's name is already in *LaggedAnalyser.variables* will result in a ValueError
+        
+        *join_type*
+            A string setting the rules for how differences in the coordinate indices of different variables are handled:
+            “outer”: use the union of object indexes
+            “inner”: use the intersection of object indexes
+
+            “left”: use indexes from the pre-existing *LaggedAnalyser.variables* with each dimension
+
+            “right”: use indexes from the new *variables* with each dimension
+
+            “exact”: instead of aligning, raise ValueError when indexes to be aligned are not equal
+
+            “override”: if indexes are of same size, rewrite indexes to be those of the pre-existing *LaggedAnalyser.variables*. Indexes for the same dimension must have the same size in all objects.
+        """
+        if isinstance(variables,dict):
             
             if is_categorical is None:
-                is_categorical={v:None for v in new_var}
+                is_categorical={v:None for v in variables}
                 
-            [self._add_variable(da,v,is_categorical[v],overwrite,join_type) for v,da in new_var.items()]
+            [self._add_variable(da,v,is_categorical[v],overwrite,join_type) for v,da in variables.items()]
             
-        elif isinstance(new_var,xr.Dataset):
-            self.add_variable({v:new_var[v] for v in new_var.data_vars},None,is_categorical,overwrite,join_type)
+        elif isinstance(variables,xr.Dataset):
+            self.add_variable({v:variables[v] for v in variables.data_vars},None,is_categorical,overwrite,join_type)
             
         else:
             
-            self._add_variable(new_var,name,is_categorical,overwrite,join_type)            
+            self._add_variable(variables,name,is_categorical,overwrite,join_type)            
         return
     
     def add_derived_composite(self,name,func,composite_vars,as_anomaly=False):
-
-        """
-        name (str): the key under which the composite is stored in self.composites
-        func (function(xr.DataArray1,xr.DataArray2,...)): A function taking in a sequence of DataArrays and returning another.
-        composite_vars (iterable[str]): The names of the DataArrays that will be fed into func
-        as_anomaly (Bool): Whether the composite should be computed from anomaly composites or full composites.
+        """Applies *func* to one or multiple composites to calculate composites of derived quantities, and additionally, stores *func* to allow derived bootstrap composites to be calculated. For linear quantities, where Ex[f(x)]==f(Ex[x]), then this can minimise redundant memory use.
+        
+        **Arguments**
+        
+        *name*
+            A string, providing the name of the new variable to add.
+            
+        *func*
+            A callable which must take 1 or more xarray.DataArrays as inputs
+            
+        *composite_vars*
+            An iterable of strings, of the same length as the number of arguments taken by *func*. Each string must be the name of a variable in *LaggedAnalyser.variables* which will be passed into *func* in order.
+        
+        **Optional arguments**
+        
+        *as_anomaly*
+            A boolean. Whether anomaly composites or full composites should be passed in to func.
+        
+        **Examples**
+        
+        NEED SOME EXAMPLES
         """
 
         input_composites=[self.composites[var] for var in composite_vars]
@@ -124,6 +175,7 @@ class LaggedAnalyser(object):
     
     #A convenience wrapper on top of xr.align
     def align(self,**kwargs):
+        """A convenience wrapper around xarray.align."""
         
         aligned_variables,aligned_event=xr.align(self.variables,self.event,**kwargs)
         self.variables=aligned_variables
@@ -131,7 +183,7 @@ class LaggedAnalyser(object):
         return 
     
     def lagged_variables(self,t):
-        
+        """A convenience function that retrieves variables at lag *t* from the *LaggedAnalyser*"""
         if t in self._lagged_variables:
             return self._lagged_variables[t]
         elif t==0:
@@ -159,7 +211,28 @@ class LaggedAnalyser(object):
         raise(NotImplementedError('Only timelike dimensions are currently supported.'))
         
     def lag_variables(self,offsets,offset_unit='days',offset_dim='time',mode='any',overwrite=False):
+        """Produces time lags of *LaggedAnalyser.variables* which can be used to produce lagged composites.
         
+        **Arguments**
+        
+        *offsets*
+            An iterable of integers which represent time lags at which to lag *LaggedAnalyser.variables* in the units specified by *offset_unit*. Positive offsets denote variables *preceding* the event.
+            
+        **Optional arguments**
+        
+        *offset_unit*
+            A string, defining the units of *offsets*. Valid options are weeks, days, hours, minutes, seconds, milliseconds, and microseconds.
+            
+        *offset_dim*
+            A string, defining the coordinate of *LaggedAnalyser.variables* along which offsets are to be calculated.
+            
+        *mode*
+            One of 'any', 'past', or 'future'. If 'past' or 'future' is used then only positive or negative lags are valid, respectively.
+            
+        *overwrite*
+            A boolean. If False, then attempts to produce a lag which already exist will raise a ValueError.
+        
+        """
         time_type=int(is_time_type(self.variables[offset_dim][0].values))
         
         lag_funcs=[self._ilag_variables,self._lag_variables]
@@ -180,6 +253,8 @@ class LaggedAnalyser(object):
     
     def dropna(self,dim,event=True,variables=False,**kwargs):
         
+        """A convenience wrapper to xarray.DataArray.dropna/xarray.Dataset.dropna
+        """
         if event:
             self.event=self.event.dropna(dim,**kwargs)
         if variables:
@@ -249,6 +324,35 @@ class LaggedAnalyser(object):
     #The top level wrapper for compositing
     def compute_composites(self,dim='time',lag_vals='all',as_anomaly=False,con_func=mean_ds,cat_func=cat_occ_ds,inplace=True):
         
+        """
+        Partitions *LaggedAnalyser.variables*, and time-lagged equivalents, into subsets depending on the value of *LaggedAnalyser.event*, and then computes a bulk summary metric for each.
+
+        **Optional arguments**
+        
+        *dim*
+            A string, the coordinate along which to compute composites.
+            
+        *lag_vals*
+            Either 'All', or a list of integers, denoting the time lags for which composites should be computed.
+            
+        *as_anomaly*
+            A Boolean, defining whether composites should be given as absolute values or differences from the unpartitioned value.
+            
+        *con_func*
+            The summary metric to use for continuous variables. Defaults to a standard mean average. If None, then continuous variables will be ignored
+            
+        cat_func*
+            The summary metric to use for categorical variables. Defaults to the occurrence probability of each categorical value. If None, then continuous variables will be ignored
+            
+        *inplace*
+            A boolean, defining whether the composite should be stored in *LaggedAnalyser.composites*
+        
+        **returns**
+        
+        *composite*
+            An xarray.Dataset like  *LaggedAnalyser.variables* but summarised according to *con_func* and *cat_func*, and with an additional coordinate *index_val*, which indexes over the values taken by *LaggedAnalyser.event*.
+            
+        """
         composite=self._compute_aggregate_over_lags(self.event,dim,lag_vals,con_func,cat_func)
         
         if as_anomaly:
@@ -268,6 +372,17 @@ class LaggedAnalyser(object):
     #Aggregates variables over all time points where event is defined, regardless of its value
     def aggregate_variables(self,dim='time',lag_vals='all',con_func=mean_ds,cat_func=cat_occ_ds):
         
+        """Adds an additional variable to LaggedAnalyser.variables.
+        
+        **Arguments**
+        *variables*
+        
+        **Optional arguments**
+        
+        **returns**
+        
+        **Examples**
+        """
         fake_event=self.event.copy(data=np.zeros_like(self.event))
         return self._compute_aggregate_over_lags(fake_event,dim,lag_vals,con_func,cat_func).isel(index_val=0)
 
@@ -277,6 +392,17 @@ class LaggedAnalyser(object):
     #Top level func
     def compute_bootstraps(self,bootnum,dim='time',con_func=mean_ds,cat_func=cat_occ_ds,lag=0,synth_mode='markov',data_vars=None):
         
+        """Adds an additional variable to LaggedAnalyser.variables.
+        
+        **Arguments**
+        *variables*
+        
+        **Optional arguments**
+        
+        **returns**
+        
+        **Examples**
+        """
         if data_vars==None:
             data_vars=list(self.variables.data_vars)
 
@@ -327,6 +453,17 @@ class LaggedAnalyser(object):
     
     def get_significance(self,bootstraps,comp,p,data_vars=None,hb_correction=True):
         
+        """Adds an additional variable to LaggedAnalyser.variables.
+        
+        **Arguments**
+        *variables*
+        
+        **Optional arguments**
+        
+        **returns**
+        
+        **Examples**
+        """
         if data_vars==None:
             data_vars=list(bootstraps.data_vars)
 
@@ -337,16 +474,26 @@ class LaggedAnalyser(object):
         pval_ds=1-2*np.abs(frac-0.5)
         if hb_correction:
             for var in pval_ds:
-                    corrected_pval=holm_bonferroni_correction(pval_ds[var].values.reshape(-1),p)\
-                                   .reshape(pval_ds[var].shape)
+                corrected_pval=holm_bonferroni_correction(pval_ds[var].values.reshape(-1),p)\
+                            .reshape(pval_ds[var].shape)
                 pval_ds[var].data=corrected_pval
         else:
             pval_ds=pval_ds<p
             
         return pval_ds.assign_coords(lag=comp.lag)    
     
-    def bootstrap_significance(self,bootnum,p,dim='time',synth_mode='markov',reuse_lag0_boots=False,con_func=mean_ds,cat_func=cat_occ_ds,data_vars=None,hb_correction=True):
+    def bootstrap_significance(self,bootnum,p,dim='time',synth_mode='markov',reuse_lag0_boots=False,con_func=mean_ds,cat_func=cat_occ_ds,data_vars=None,hb_correction=False):
+        """Adds an additional variable to LaggedAnalyser.variables.
         
+        **Arguments**
+        *variables*
+        
+        **Optional arguments**
+        
+        **returns**
+        
+        **Examples**
+        """
         lag_vals=list(self._lagged_variables)
 
         boots=self.compute_bootstraps(bootnum,dim,con_func,cat_func,0,synth_mode,data_vars)
@@ -363,7 +510,17 @@ class LaggedAnalyser(object):
     
 
     def compute_variable_mask(self,min_amp=0,min_dim_extents={},data_vars=None,drop_allnan_composites=False,skip_sig_test=False):
-
+        """Adds an additional variable to LaggedAnalyser.variables.
+        
+        **Arguments**
+        *variables*
+        
+        **Optional arguments**
+        
+        **returns**
+        
+        **Examples**
+        """
         if data_vars is None:
             data_vars=list(self.composites.data_vars)
 
@@ -430,7 +587,17 @@ class LaggedAnalyser(object):
     ### GENERATE INDEX ###
         
     def generate_variable_index(self,variables,dim='time',min_amp=None,min_stdev=None,cat_val=0,lag=0,add=True):
-
+        """Adds an additional variable to LaggedAnalyser.variables.
+        
+        **Arguments**
+        *variables*
+        
+        **Optional arguments**
+        
+        **returns**
+        
+        **Examples**
+        """
         if (not min_amp is None) and (not min_stdev is None):
             raise(ValueError('Only one of min_amp or min_stdev should be provided'))
 
@@ -457,172 +624,3 @@ class LaggedAnalyser(object):
             for var in indices:
                 self.add_variable(f'{var}_l{lag}m{cat_val}_ix',indices[var],is_cat=0)
         return indices
-
-        
-    
-    ########################################################
-        
-    #The top level wrapper: runs checks and loops over lags
-    def compute_BSS(self,dim='time',lag_vals='all',continuous_variables='ignore',training_test=None,thresh_dict={},varnames=None):
-        
-        assert is_two_valued(self.event,dropnan=False)
-        if lag_vals=='all':
-            lag_vals=list(self._lagged_variables)
-            
-        if varnames is None:
-            varnames=list(self.variables.data_vars)
-
-        #Get lag 0 BSS
-        BSS=self._compute_BSS(\
-            self.event,self.variables,dim,continuous_variables,training_test,thresh_dict,varnames)
-              
-        #Do any lagged vals
-        if lag_vals is not None:
-            lag_BSSs=[]
-    
-            for t in lag_vals:
-                lag_BSSs.append(self._compute_BSS(\
-                self.event,self.lagged_variables(t),dim,continuous_variables,training_test,thresh_dict,varnames,lag=t))
-            
-            BSS=xr.concat([BSS,*lag_BSSs],'lag').sortby('lag')
-            
-        self.BSS=BSS
-        return BSS
-
-    def _compute_BSS(self,da,ds,dim,continuous_variables,training_test,thresh_dict,varnames,lag=0):
-                    
-        da,ds=xr.align(da,ds)
-        ds=ds[varnames]
-        v1,v2=np.unique(da)
-        ix=(da.values==np.max([v1,v2]))
-                    
-        cat_vars=[v for v in ds if ds[v].attrs['is_categorical']]
-        con_vars=[v for v in ds if not v in cat_vars]
-        cat_ds=ds[cat_vars]
-        con_ds=ds[con_vars]
-        
-        not_1d=[var for var in con_ds if con_ds[var].ndim!=1]
-        if not_1d!=[]:
-            con_ds=con_ds.drop(not_1d)
-            print('Warning: only 1D continuous variables can currently be made categorical.')
-            print(f'Ignoring variables {not_1d}.')
-
-        
-
-        #Just don't use continuous variables
-        if continuous_variables=='ignore':
-            predict_ds=cat_ds
-        #Use threshold to make continuous variables categorical
-        elif continuous_variables=='abs_thresh':    
-            con_ds=self._threshold_to_cat(con_ds,thresh_dict)
-            predict_ds=xr.merge([con_ds,cat_ds])
-        #Use threshold to make continuous variables categorical
-        elif continuous_variables=='perc_thresh':    
-            con_ds=self._perc_threshold_to_cat(con_ds,thresh_dict)
-            predict_ds=xr.merge([con_ds,cat_ds])
-        #Find the threshold that maximises the BSS in the training data
-        elif continuous_variables=='optimise':
-            con_ds=self._optimise_threshold_to_cat(con_ds,da,mode='BSS')
-            predict_ds=xr.merge([con_ds,cat_ds])
-        elif continuous_variables=='logistic':
-            con_ds=self._logistic_regression(con_ds,da)
-            predict_ds=xr.merge([con_ds,cat_ds])
-        else:
-            raise(ValueError("bad keyword"))
-        
-        if training_test is not None:
-            training_slice,testing_slice=training_test
-            test_da=da[testing_slice]
-            test_da,test_ds=xr.align(test_da,predict_ds)
-
-            da=da[training_slice]
-            da,predict_ds=xr.align(da,predict_ds)
-        
-        #get regime occurrences
-        states=predict_ds.map(np.unique,axis=0)
-        
-        ##Designed to expand the below dict comprehension in order to handle a multivariate da - not quite there yet
-        #prob_var={}
-        #for var in predict_ds:
-        #    prob_arr=[]
-        #    for k in states[var].values:
-        #        bool_arr= predict_ds[var]==k
-        #        vals=da.values
-        #        probs=[]
-        #        
-        #        ps=np.atleast_2d(bool_arr)
-        #        if bool_arr.ndim>1:
-        #            ps=ps.T
-        #        
-        #        for p in ps:
-        #            probs.append(np.mean(vals[p]))
-        #        prob_arr.append(probs)
-        #    prob_var[var]=prob_arr
-                          
-        prob_var={var:np.array([np.mean(da[predict_ds[var]==k]).values for k in states[var].values]) for var in predict_ds}
-        
-        #compute forecast
-        
-        forecasts={}
-        if training_test is not None:
-            da=test_da
-            predict_ds=test_ds
-            
-        for var,probs in prob_var.items():
-
-            regime_forecast=np.zeros_like(da)
-            for i,k in enumerate(states[var]):
-                regime_forecast[predict_ds[var]==k]=probs[i]
-            forecasts[var]=regime_forecast
-        
-        bss=xr.Dataset({var:BSS(fc,da.values) for var,fc in forecasts.items()})
-        return bss
-    
-    def _threshold_to_cat(self,ds,thresh_dict):
-        
-        cat_ds=ds.copy()
-        for var in ds:
-            if var in thresh_dict: 
-                cat_ds[var].values=ds[var].values>=thresh_dict[var]
-            else:
-                cat_ds=cat_ds.drop(var)
-        return cat_ds
-    
-    def _perc_threshold_to_cat(self,ds,thresh_dict):
-        
-        cat_ds=ds.copy()
-        for var in ds:
-            if var in thresh_dict: 
-                thresh=np.nanpercentile(ds[var].values,thresh_dict[var])
-                cat_ds[var].values=ds[var].values>=thresh
-            else:
-                cat_ds=cat_ds.drop(var)
-        return cat_ds
-
-    def _optimise_threshold_to_cat(self,ds,da,mode):
-        
-        percs=np.arange(1,100)
-        bsses=[]
-        for p in percs:
-            thr={var:p for var in ds}
-            cat_ds=self._perc_threshold_to_cat(ds,thr)
-            states=cat_ds.map(np.unique,axis=0)
-
-            prob_var={var:np.array([np.mean(da[cat_ds[var]==k]).values\
-                for k in states[var].values]) for var in cat_ds}
-
-            forecasts={}
-            for var,probs in prob_var.items():
-
-                regime_forecast=np.zeros_like(da)
-                for i,k in enumerate(states[var]):
-                    regime_forecast[cat_ds[var]==k]=probs[i]
-                forecasts[var]=regime_forecast
-
-            bss=xr.Dataset({var:BSS(fc,da.values) for var,fc in forecasts.items()})
-            bsses.append(bss)
-        bsses=xr.concat(bsses,'percentile')
-        optimal_thresholds={var: \
-        bsses[var].percentile[bsses[var].argmax('percentile').values].values for var in bsses}
-        self.optimised_thresholds=optimal_thresholds
-        return self._perc_threshold_to_cat(ds,optimal_thresholds)
