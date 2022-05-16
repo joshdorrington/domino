@@ -6,7 +6,7 @@ from scipy.optimize import leastsq
 import os
 import matplotlib.pyplot as plt
 import cftime
-from .util import xarr_times_to_ints
+#from util import xarr_times_to_ints
 
 class Agg_Deseasonaliser(object):
     """

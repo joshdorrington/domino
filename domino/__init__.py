@@ -1,4 +1,5 @@
-from .util import *
-from .regime import *
-from .scores import *
+import os
+import sys
+sys.path.insert(0, os.path.abspath('./../'))
+
 from .composites import *
