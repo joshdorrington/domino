@@ -1,5 +1,5 @@
 **LaggedAnalyser Documention**
 =================================
 
-.. autoclass:: composites.LaggedAnalyser
+.. automodule:: composites
    :members:

@@ -3,8 +3,8 @@ import datetime as dt
 import xarray as xr
 import pandas as pd
 import cartopy.crs as ccrs
-from domino.util import holm_bonferroni_correction, offset_time_dim, standardise, is_two_valued,split_to_contiguous,is_time_type,make_all_dims_coords,drop_scalar_coords,squeeze_da
-from domino.regime import xr_reg_occurrence,get_transmat,synthetic_states_from_transmat
+from util import holm_bonferroni_correction, offset_time_dim, standardise, is_two_valued,split_to_contiguous,is_time_type,make_all_dims_coords,drop_scalar_coords,squeeze_da
+from regime import xr_reg_occurrence,get_transmat,synthetic_states_from_transmat
 from sklearn.linear_model import LogisticRegression
 
 def aggregate_ds(ds,dim,agg_func,**agg_kwargs):
