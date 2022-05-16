@@ -2,7 +2,7 @@
 
 ## Documentation
 
-See doc.pdf
+See documentation.pdf
 
 ## Examples
 
