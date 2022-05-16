@@ -3,3 +3,10 @@ domino.egg-info/PKG-INFO
 domino.egg-info/SOURCES.txt
 domino.egg-info/dependency_links.txt
 domino.egg-info/top_level.txt
+pyfiles/__init__.py
+pyfiles/composites.py
+pyfiles/deseasonaliser.py
+pyfiles/plotting.py
+pyfiles/regime.py
+pyfiles/scores.py
+pyfiles/util.py
