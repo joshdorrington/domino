@@ -1,0 +1,5 @@
+setup.py
+domino.egg-info/PKG-INFO
+domino.egg-info/SOURCES.txt
+domino.egg-info/dependency_links.txt
+domino.egg-info/top_level.txt

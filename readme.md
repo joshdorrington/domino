@@ -1,0 +1,1 @@
+Domino is a package for analysing composites of atmospheric data. This is an experimental release!
