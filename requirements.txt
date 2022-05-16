@@ -2,6 +2,11 @@ numpy
 datetime
 xarray
 pandas
+GEOS
+shapely
+pyshp
+PROJ
+pyproj
 cartopy
 sklearn
 cftime
