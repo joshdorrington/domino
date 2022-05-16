@@ -5,6 +5,7 @@
 
 Welcome to Domino's documentation!
 ==================================
+.. automodule:: __init__
 
 .. toctree::
    :maxdepth: 2
