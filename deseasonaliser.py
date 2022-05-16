@@ -5,7 +5,6 @@ import pandas as pd
 from scipy.optimize import leastsq
 import os
 import matplotlib.pyplot as plt
-import time
 import cftime
 #from util import xarr_times_to_ints
 

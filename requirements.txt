@@ -1,0 +1,13 @@
+numpy
+datetime
+xarray
+pandas
+cartopy
+sklearn
+cftime
+scipy
+os
+matplotlib
+cmocean
+pickle
+cf_units
