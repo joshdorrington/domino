@@ -6,7 +6,6 @@ click-plugins==1.1.1
 cmocean==2.0
 colorspacious==1.1.2
 commonmark==0.9.1
-conda==4.11.0
 cytoolz==0.11.0
 dask==2021.10.0
 docutils==0.17.1
