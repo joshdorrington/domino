@@ -3,7 +3,7 @@ import datetime as dt
 import xarray as xr
 import pandas as pd
 import cartopy.crs as ccrs
-from util import holm_bonferroni_correction, offset_time_dim, is_two_valued,split_to_contiguous,is_time_type,make_all_dims_coords,drop_scalar_coords
+from util import holm_bonferroni_correction, offset_time_dim, standardise, is_two_valued,split_to_contiguous,is_time_type,make_all_dims_coords,drop_scalar_coords,squeeze_da
 from regime import xr_reg_occurrence,get_transmat,synthetic_states_from_transmat
 from scores import BSS
 from sklearn.linear_model import LogisticRegression
@@ -18,19 +18,22 @@ def cat_occ_ds(ds,dim,reg_ds):
     return aggregate_ds(ds,dim,xr_reg_occurrence,s=reg_ds,coord_name='variable_cat_val')
 
 class LaggedAnalyser(object):
-    """Analysis of lagged composites defined with respect to a categorical event series"""
+    """Analysis of lagged composites defined with respect to a categorical event series
     
-    def __init__(self,event,variables=None,name=None,is_categorical=None):
-        """Create a LaggedAnalyser object.
-        
         **Arguments:**
+        
         *event*
             An xarray.DataArray with one dimension taking on categorical values, each defining a class of event (or non-event).
             
         **Optional arguments**
-        *variables*,*name*,*is_categorical*
+        
+        *variables, name, is_categorical*
+        
             Arguments for adding variables to the LaggedAnalyser. Identical behaviour to calling add_variables directly.
-        """
+"""
+    
+    def __init__(self,event,variables=None,name=None,is_categorical=None):
+        """Create a LaggedAnalyser object."""
         
         #event is a dataarray
         self.event=xr.DataArray(event)
@@ -44,7 +47,7 @@ class LaggedAnalyser(object):
         #Time lagged versions of the dataset self.variables will be stored here, with a key
         #equal to the lag applied. Designed to be accessed by the self.lagged_variables function
         self._lagged_variables={}
-        
+        self.lagged_means=None
         #variables that are a linear combination of other variables are more efficiently
         #computed after compositing using the self.add_derived_composite method
         self._derived_variables={}
@@ -76,14 +79,16 @@ class LaggedAnalyser(object):
     
     def _add_variable(self,da,name,is_categorical,overwrite,join_type):
         
+        if name is None:
+            name=da.name
         if (name in self.variables)&(not overwrite):
             raise(KeyError(f'Key "{name}" is already in variables.'))
         
         try:
-            self.variables=self.variables.merge(da.to_dataset(name=name),join=join_type)
+            self.variables=self.variables.merge(squeeze_da(da).to_dataset(name=name),join=join_type)
         except:
             #Trying to make the merge work:
-            self.variables=self._more_mergable(self.variables).merge(self._more_mergable(da.to_dataset(name=name)),join=join_type)
+            self.variables=self._more_mergable(self.variables).merge(self._more_mergable(squeeze_da(da).to_dataset(name=name)),join=join_type)
 
         if (is_categorical is None) and (not 'is_categorical' in da.attrs):
             self.variables[name].attrs['is_categorical']=0
@@ -138,44 +143,10 @@ class LaggedAnalyser(object):
             self._add_variable(variables,name,is_categorical,overwrite,join_type)            
         return
     
-    def add_derived_composite(self,name,func,composite_vars,as_anomaly=False):
-        """Applies *func* to one or multiple composites to calculate composites of derived quantities, and additionally, stores *func* to allow derived bootstrap composites to be calculated. For linear quantities, where Ex[f(x)]==f(Ex[x]), then this can minimise redundant memory use.
-        
-        **Arguments**
-        
-        *name*
-            A string, providing the name of the new variable to add.
-            
-        *func*
-            A callable which must take 1 or more xarray.DataArrays as inputs
-            
-        *composite_vars*
-            An iterable of strings, of the same length as the number of arguments taken by *func*. Each string must be the name of a variable in *LaggedAnalyser.variables* which will be passed into *func* in order.
-        
-        **Optional arguments**
-        
-        *as_anomaly*
-            A boolean. Whether anomaly composites or full composites should be passed in to func.
-        
-        **Examples**
-        
-        NEED SOME EXAMPLES
-        """
-
-        input_composites=[self.composites[var] for var in composite_vars]
-        if as_anomaly:
-            input_composites=[comp-self.composite_means[var]\
-                    for comp,var in zip(input_composites,composite_vars)]
-        elif np.ndim(as_anomaly)==1:
-            raise(NotImplementedError('variable-specific anomalies not yet implemented'))
-
-        self.composites[name]=func(*input_composites)
-        self._derived_variables[name]=(func,composite_vars)
-        return
     
-    #A convenience wrapper on top of xr.align
+    #TODO: Add pad align
     def align(self,**kwargs):
-        """A convenience wrapper around xarray.align."""
+        """A convenience wrapper equivalent to calling xr.align(LaggedAnalyser.variables,LaggedAnalyser.event,**kwargs)."""
         
         aligned_variables,aligned_event=xr.align(self.variables,self.event,**kwargs)
         self.variables=aligned_variables
@@ -193,6 +164,8 @@ class LaggedAnalyser(object):
             
     def _lag_variables(self,offset,offset_unit='days',offset_dim='time',mode='any',overwrite=False):
         
+        if offset==0:
+            return
         if (offset in self._lagged_variables)&(not overwrite):
             raise(KeyError(f'Key "{offset}" is already in lagged_variables.'))
             
@@ -301,7 +274,7 @@ class LaggedAnalyser(object):
                 comp=self._aggregate_from_ix(con_ds,ix,dim,con_func)
         else:
                 comp=self._aggregate_from_ix(cat_ds,ix,dim,cat_func,cat_vals)
-            
+        comp.attrs=ds.attrs
         return comp.assign_coords({'lag':[lag]})
 
     
@@ -341,67 +314,126 @@ class LaggedAnalyser(object):
         *con_func*
             The summary metric to use for continuous variables. Defaults to a standard mean average. If None, then continuous variables will be ignored
             
-        cat_func*
+        *cat_func*
             The summary metric to use for categorical variables. Defaults to the occurrence probability of each categorical value. If None, then continuous variables will be ignored
             
         *inplace*
             A boolean, defining whether the composite should be stored in *LaggedAnalyser.composites*
         
         **returns**
-        
-        *composite*
             An xarray.Dataset like  *LaggedAnalyser.variables* but summarised according to *con_func* and *cat_func*, and with an additional coordinate *index_val*, which indexes over the values taken by *LaggedAnalyser.event*.
             
         """
         composite=self._compute_aggregate_over_lags(self.event,dim,lag_vals,con_func,cat_func)
-        
+        lagged_means=self.aggregate_variables(dim,lag_vals,con_func,cat_func)
+
         if as_anomaly:
-            lagged_means=self.aggregate_variables(dim,lag_vals,con_func,cat_func)
             composite=composite-lagged_means
             
         composite=make_all_dims_coords(composite)
-        
+        for v in list(composite.data_vars):
+            composite[v].attrs=self.variables[v].attrs
         if inplace:
             self.composites=composite
+            self.composite_func=(con_func,cat_func)
             self.composites_are_anomaly=as_anomaly
-            if as_anomaly:
-                self.lagged_means=lagged_means
-
+            self.lagged_means=lagged_means
         return composite
 
     #Aggregates variables over all time points where event is defined, regardless of its value
     def aggregate_variables(self,dim='time',lag_vals='all',con_func=mean_ds,cat_func=cat_occ_ds):
         
-        """Adds an additional variable to LaggedAnalyser.variables.
-        
-        **Arguments**
-        *variables*
+        """Calculates a summary metric from *LaggedAnalyser.variables* at all points where *LaggedAnalyser.event* is defined, regardless of its value.
         
         **Optional arguments**
         
+        *dim*
+            A string, the name of the shared coordinate between *LaggedAnalyser.variables* and *LaggedAnalyser.event*.
+        
+        *lag_vals*
+            'all' or a iterable of integers, specifying for which lag values to compute the summary metric.
+        
+        *con_func*
+            The summary metric to use for continuous variables. Defaults to a standard mean average. If None, then continuous variables will be ignored
+            
+        *cat_func*
+            The summary metric to use for categorical variables. Defaults to the occurrence probability of each categorical value. If None, then continuous variables will be ignored
+
         **returns**
         
-        **Examples**
-        """
+            An xarray.Dataset like  *LaggedAnalyser.variables* but summarised according to *con_func* and *cat_func*.
+
+"""
         fake_event=self.event.copy(data=np.zeros_like(self.event))
         return self._compute_aggregate_over_lags(fake_event,dim,lag_vals,con_func,cat_func).isel(index_val=0)
 
+    def add_derived_composite(self,name,func,composite_vars,as_anomaly=False):
+        """Applies *func* to one or multiple composites to calculate composites of derived quantities, and additionally, stores *func* to allow derived bootstrap composites to be calculated. For linear quantities, where Ex[f(x)]==f(Ex[x]), then this can minimise redundant memory use.
+        
+        **Arguments**
+        
+        *name*
+            A string, providing the name of the new variable to add.
+            
+        *func*
+            A callable which must take 1 or more xarray.DataArrays as inputs
+            
+        *composite_vars*
+            An iterable of strings, of the same length as the number of arguments taken by *func*. Each string must be the name of a variable in *LaggedAnalyser.variables* which will be passed into *func* in order.
+        
+        **Optional arguments**
+        
+        *as_anomaly*
+            A boolean. Whether anomaly composites or full composites should be passed in to func.
+        """
+        
+        if np.ndim(as_anomaly)==1:
+            raise(NotImplementedError('variable-specific anomalies not yet implemented'))
+
+        self._derived_variables[name]=(func,composite_vars,as_anomaly)
+        self.composites[name]=self.compute_derived_da(self.composites,func,composite_vars,as_anomaly)
+        
+        if self.lagged_means is not None:
+            self.lagged_means[name]=self.compute_derived_da(self.lagged_means,func,composite_vars,as_anomaly)
+            
+        return
 
     ### Compute bootstraps ###
     
     #Top level func
     def compute_bootstraps(self,bootnum,dim='time',con_func=mean_ds,cat_func=cat_occ_ds,lag=0,synth_mode='markov',data_vars=None):
         
-        """Adds an additional variable to LaggedAnalyser.variables.
+        """Computes composites from synthetic event indices, which can be used to assess whether composites are insignificant.
         
         **Arguments**
-        *variables*
         
+        *bootnum*
+            An integer, the number of bootstrapped composites to compute
+            
         **Optional arguments**
         
+        *dim*
+            A string, the name of the shared coordinate between *LaggedAnalyser.variables* and *LaggedAnalyser.event*.
+            
+        *con_func*
+            The summary metric to use for continuous variables. Defaults to a standard mean average. If None, then continuous variables will be ignored
+            
+        *cat_func*
+            The summary metric to use for categorical variables. Defaults to the occurrence probability of each categorical value. If None, then continuous variables will be ignored
+
+        *lag*
+            An integer, specifying which lagged variables to use for the bootstraps. i.e. bootstraps for lag=90 will be from a completely different season than those for lag=0.
+        *synth_mode*
+            A string, specifying how synthetic event indices are to be computed. Valid options are:
+            "random": categorical values are randomly chosen with the same probability of occurrence as those found in *LaggedAnalyser.event*, but with no autocorrelation.
+            'markov': A first order Markov chain is fitted to *LaggedAnalyser.event*, producing some autocorrelation and state dependence in the synthetic series. Generally a better approximation than "random" and so should normally be used.
+            
+        *data_vars*
+            An iterable of strings, specifying for which variables bootstraps should be computed.
+                
         **returns**
-        
-        **Examples**
+            An xarray.Dataset like *LaggedAnalyser.variables* but summarised according to *con_func* and *cat_func*, and with a new coordinate 'bootnum' of length *bootnum*.
+
         """
         if data_vars==None:
             data_vars=list(self.variables.data_vars)
@@ -411,10 +443,19 @@ class LaggedAnalyser(object):
             boots=boots-self.lagged_means.sel(lag=lag)
         return make_all_dims_coords(boots)
     
+    
+    def compute_derived_da(self,ds,func,varnames,as_anomaly):
+        if as_anomaly:
+            input_vars=[ds[v]-self.lagged_means[v] for v in varnames]
+        else:
+            input_vars=[ds[v] for v in varnames]
+        return make_all_dims_coords(func(*input_vars))
+    
+    
     def _add_derived_boots(self,boots):
         for var in self._derived_variables:
-            func,input_vars=self._derived_variables[var]
-            boots[var]=func(*[boots[v] for v in input_vars])
+            func,input_vars,as_anomaly=self._derived_variables[var]
+            boots[var]=self.compute_derived_da(boots,func,input_vars,as_anomaly)
         return boots
 
     def _compute_bootstraps(self,bootnum,dim,con_func,cat_func,lag,synth_mode,data_vars):
@@ -451,18 +492,30 @@ class LaggedAnalyser(object):
         
     ### apply significance test ###
     
-    def get_significance(self,bootstraps,comp,p,data_vars=None,hb_correction=True):
+    def get_significance(self,bootstraps,comp,p,data_vars=None,hb_correction=False):
         
-        """Adds an additional variable to LaggedAnalyser.variables.
+        """Computes whether a composite is significant with respect to a given distribution of bootstrapped composites.
         
         **Arguments**
-        *variables*
         
+            *bootstraps*
+                An xarray.Dataset with a coordinate 'bootnum'
+                
+            *comp*
+                An xarray Dataset of the same shape as *bootstraps* but without a 'bootnum' coordinate. Missing or additional variables are allowed, and are simply ignored.
+            *p*
+                A float, specifying the p-value of the 2-sided significance test (values in the range 0 to 1). 
+            
         **Optional arguments**
+
+        *data_vars*
+            An iterable of strings, specifying for which variables significance should be computed.
+            
+        *hb_correction*
+            A Boolean, specifying whether a Holm-Bonferroni correction should be applied to *p*, in order to reduce the family-wide error rate. Note that this correction is currently only applied to each variable in *comp* independently, and so will have no impact on scalar variables.
         
         **returns**
-        
-        **Examples**
+            An xarray.Dataset like *comp* but with boolean data, specifying whether each feature of each variable passed the significance test.
         """
         if data_vars==None:
             data_vars=list(bootstraps.data_vars)
@@ -482,20 +535,45 @@ class LaggedAnalyser(object):
             
         return pval_ds.assign_coords(lag=comp.lag)    
     
-    def bootstrap_significance(self,bootnum,p,dim='time',synth_mode='markov',reuse_lag0_boots=False,con_func=mean_ds,cat_func=cat_occ_ds,data_vars=None,hb_correction=False):
-        """Adds an additional variable to LaggedAnalyser.variables.
+    def bootstrap_significance(self,bootnum,p,dim='time',synth_mode='markov',reuse_lag0_boots=False,data_vars=None,hb_correction=False):
+        
+        """A wrapper around *compute_bootstraps* and *test_significance*, that calculates bootstraps and applies a significance test to a number of time lagged composites simulataneously.
         
         **Arguments**
-        *variables*
         
+        *bootnum*
+            An integer, the number of bootstrapped composites to compute
+            
+        *p*
+            A float, specifying the p-value of the 2-sided significance test (values in the range 0 to 1). 
+
         **Optional arguments**
+    
+        *dim*
+            A string, the name of the shared coordinate between *LaggedAnalyser.variables* and *LaggedAnalyser.event*.
+            
+        *synth_mode*
+            A string, specifying how synthetic event indices are to be computed. Valid options are:
+            "random": categorical values are randomly chosen with the same probability of occurrence as those found in *LaggedAnalyser.event*, but with no autocorrelation.
+            'markov': A first order Markov chain is fitted to *LaggedAnalyser.event*, producing some autocorrelation and state dependence in the synthetic series. Generally a better approximation than "random" and so should normally be used.
+
+        *reuse_lag0_boots*
+            A Boolean. If True, bootstraps are only computed for lag=0, and then used as a null distribution to assess all lagged composites. For variables which are approximately stationary across the lag timescale, then this is a good approximation and can increase performance. However if used incorrectly, it may lead to 'significant composites' which simply reflect the seasonal cycle. if False, separate bootstraps are computed for all time lags.
+            
+        *data_vars*
+            An iterable of strings, specifying for which variables significance should be computed.
+        
+        *hb_correction*
+            A Boolean, specifying whether a Holm-Bonferroni correction should be applied to *p*, in order to reduce the family-wide error rate. Note that this correction is currently only applied to each variable in *comp* independently, and so will have no impact on scalar variables.
         
         **returns**
-        
-        **Examples**
+            An xarray.Dataset like *LaggedAnalyser.variables* but with the *dim* dimension summarised according to *con_func* and *cat_func*, an additional *lag* coordinate, and with boolean data specifying whether each feature of each variable passed the significance test.
+
         """
         lag_vals=list(self._lagged_variables)
-
+        
+        con_func,cat_func=self.composite_func
+        
         boots=self.compute_bootstraps(bootnum,dim,con_func,cat_func,0,synth_mode,data_vars)
         
         #reuse_lag0_boots=True can substantially reduce run time!
@@ -509,17 +587,36 @@ class LaggedAnalyser(object):
         return self.composite_sigs
     
 
-    def compute_variable_mask(self,min_amp=0,min_dim_extents={},data_vars=None,drop_allnan_composites=False,skip_sig_test=False):
-        """Adds an additional variable to LaggedAnalyser.variables.
-        
-        **Arguments**
-        *variables*
+    def compute_variable_mask(self,min_amp=0,min_dim_extents={},data_vars=None,drop_allnan_composites=False,skip_sig_test=False,inplace=True,overwrite=False):
+        """Computes a Boolean mask to filter out features of variables with little relation to the event index. This is done through a flexible combination of statistical significance testing, applying a minimum amplitude threshold, and requiring unmasked features to span a particular spatial or temporal scale.
         
         **Optional arguments**
         
-        **returns**
+        *min_amp*
+            A float, specifying a minimum absolute amplitude below which composite anomalies are masked. *min_amp* is intepreted as a fraction of the standard deviation of each variable, calculated along the shared coordinate between *LaggedAnalyser.event* and *LaggedAnalyser.variables*, at all points where *LaggedAnalyser.event* is defined.
+            
+        *min_dim_extents*
+            A dictionary in the format {str:int} where keys specify coordinate names in *LaggedAnalyser.composites*, and values specify a minimum length threshold for each coordinate. Unmasked features (as defined by the amplitude test and/or the significant test) for a variable are masked anyway if they are not part of a contiguous sequence of unmasked anomalies that meet the minimum length threshold along each dimension. E.g. *min_dim_extents* ={'lat':5,'lon':5} would mean any unmasked features in a field variable that did not span 5 grid points in both the latitudinal and longitudinal direction, would be masked.
+            
+        *data_vars*
+            An iterable of strings, specifying for which variables a mask should be computed.
         
-        **Examples**
+        *drop_allnan_composites*
+            A boolean, specifying whether variables which are masked at all coordinate values should be dropped FROM WHAT THOUGH? DOUBLE CHECK.
+            
+        *skip_sig_test*
+            If True, no signifance test is applied, and filtering is done solely based on amplitude and extent.
+        
+        *inplace*
+            A boolean, specifying whether the output should be saved to *LaggedAnalyser.composite_masks*
+        
+        *overwrite*
+            A boolean, which if *inplace*=True, specifies whether overwriting an existing *LaggedAnalyser.composite_masks* is allowed.
+            
+        **returns**
+            
+            An xarray.Dataset like *LaggedAnalyser.variables* but with the *dim* dimension summarised according to *con_func* and *cat_func*, an additional *lag* coordinate, and with boolean data specifying whether each feature of each variable is masked or not.
+            
         """
         if data_vars is None:
             data_vars=list(self.composites.data_vars)
@@ -537,14 +634,15 @@ class LaggedAnalyser(object):
 
         #... and finally that has some minimum extent along certain dimensions:
         is_sig=self._set_shortlived_1s_in_ds_to_0(is_sig,min_dim_extents)
-
-        if self.composite_mask is None:
-            self.composite_mask=is_sig
-        else:
-            self.composite_mask=self.composite_mask.merge(is_sig)
+        
+        if inplace:
+            if (self.composite_mask is None) or overwrite:
+                self.composite_mask=is_sig
+            else:
+                self.composite_mask=self.composite_mask.merge(is_sig)
         if drop_allnan_composites:
             self._drop_allnan_composites()
-        return self.composite_mask
+        return is_sig
 
     def _is_min_amplitude(self,min_amp):
         stds=self.aggregate_variables(con_func=std_ds,cat_func=None)
@@ -586,41 +684,52 @@ class LaggedAnalyser(object):
         
     ### GENERATE INDEX ###
         
-    def generate_variable_index(self,variables,dim='time',min_amp=None,min_stdev=None,cat_val=0,lag=0,add=True):
-        """Adds an additional variable to LaggedAnalyser.variables.
+    def generate_variable_index(self,data_var,mask,dim='time',sel={},inplace=True,name=None):
+        """Computes standardised scalar indices from masked composites, by taking a dot product between corresponding variable and composite DataArrays.
         
         **Arguments**
-        *variables*
-        
+            
+        *data_var*
+            A string, specifying which variable should be used to compute the index.
+        *mask*
+            A Dataset with boolean entries. Only features of data_var where mask=True will be included in the dot product.
+            
         **Optional arguments**
-        
+            
+        *dim*
+            A string, specifying the name of the shared dimension between *LaggedAnalyser.variables* and LaggedAnalyser.event*
+            
+        *sel*
+            A dictionary whose keys should be coordinate names, and whose elements should be valid coordinate values, or ranges of coordinate values. Specifies how data_var should be subsetted prior to dot product computation.
+            
+        *inplace*
+            A boolean, specifying whether the new index should be added to *LaggedAnalyser.variables*
+            
+        *name*
+            A string, specifying the name of the new index
+            
         **returns**
-        
-        **Examples**
+            An xr.DataArray
+            
         """
-        if (not min_amp is None) and (not min_stdev is None):
-            raise(ValueError('Only one of min_amp or min_stdev should be provided'))
+        #if mask is None:
+        #    mask=self.composite_mask
+                    
+        comp=self.composites[data_var].sel(**sel).copy(deep=True)
+        mask=mask.sel(**sel)
+        da=self.variables[data_var]
 
-        comp=self.composites[variables].sel(cat_val=cat_val,lag=lag).copy(deep=True)
-        sig=self.composite_sigs[variables].sel(cat_val=cat_val,lag=lag)
-        ds=self.variables[variables]
+        comp.values[~mask[data_var].values]=np.nan
+        mean=self.lagged_means.sel({key:val for key,val in sel.items() if key in self.lagged_means.dims})
+        da_anom=da-mean[data_var]
 
-        for var in sig:
-            comp[var].values[~sig[var].values]=np.nan
-        ds_anom=ds-self.get_variable_means()[variables]
-
-        #Additionally mask out any gridpoints with small anomalies
-        if min_stdev is not None:
-            min_amp=ds.std(dim)
-        if min_amp is not None:
-            small_anoms=np.abs(comp)<min_amp
-            for var in small_anoms:
-                comp[var].values[small_anoms[var].values]=np.nan
-
-        dim_list=[d for d in list(ds.dims) if d!=dim]
-        indices=(ds_anom*comp).mean(dim_list)
-
-        if add:
-            for var in indices:
-                self.add_variable(f'{var}_l{lag}m{cat_val}_ix',indices[var],is_cat=0)
-        return indices
+        dim_list=[d for d in list(da.dims) if d!=dim]
+        indices=standardise((da_anom*comp).mean(dim_list))
+        
+        if name is None:
+            name=data_var+"_"+"".join([f'{key}{val}_' for key,val in sel.items()])
+            name=name[:-1]
+        indices=indices.rename(name)
+        if inplace:
+            self.add_variable(indices,name=name,is_categorical=0)
+        return squeeze_da(indices)

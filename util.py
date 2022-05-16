@@ -7,6 +7,13 @@ import datetime as dt
 import numpy as np
 import cf_units
 
+def squeeze_da(da):   
+    return da.drop([c for c in da.coords if np.size(da[c])==1])
+
+def standardise(da,dim=None):
+    da=da-da.mean(dim=dim)
+    da=da/da.std(dim=dim)
+    return da
 def drop_scalar_coords(ds):
     for v in [v for v in list(ds.coords) if ds[v].size<2]:
         ds=ds.drop(v)
