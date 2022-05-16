@@ -15,6 +15,7 @@ dependencies:
   - ca-certificates=2022.4.26=h06a4308_0
   - cartopy=0.18.0=py310h95ad73f_2
   - certifi=2021.10.8=py310hff52083_2
+  - cftime=1.5.1.1=py310h9102076_0
   - click=8.0.4=py310h06a4308_0
   - cloudpickle=2.0.0=pyhd3eb1b0_0
   - cmocean=2.0=py_3
