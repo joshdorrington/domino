@@ -6,7 +6,11 @@ See https://weather-domino.readthedocs.io/en/latest/docs/composites.html , or do
 
 ## Examples
 
-See examples/ for jupyter notebooks
+A basic introduction to using the package out of the box, with three example applications:
+https://github.com/joshdorrington/domino/blob/main/examples/basic_usage.ipynb
+
+A more in-depth discussion of how to customise the behaviour of the LaggedAnalyser class:
+https://github.com/joshdorrington/domino/blob/main/examples/advanced_precursors.ipynb
 
 ## Install
 
