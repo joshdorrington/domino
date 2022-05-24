@@ -40,7 +40,8 @@ class Agg_Deseasonaliser(object):
     def evaluate_cycle(self,data=None,smooth=1):
         if data is None:
             data=self.data
-        return self.smooth(self.cycle_coeffs[getattr(data[self.dim].dt,self.agg).data-1],smooth)
+        cycle=self.cycle_coeffs.sel({self.agg:getattr(data[self.dim].dt,self.agg).data})
+        return self.smooth(cycle,smooth)
     
     def smooth(self,arr,w):
         if w==1:
