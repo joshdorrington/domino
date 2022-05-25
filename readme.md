@@ -16,7 +16,7 @@ https://github.com/joshdorrington/domino/blob/main/examples/advanced_precursors.
 
 ## Install
 
-At present, best way is to download and extract this repository, at your_favourite_path, and then use 
+At present, best way is to download and extract this repository, at your_favourite_path, and then at the top of your .py file, write: 
 ```
 import sys
 sys.path.append('your_favourite_path')
