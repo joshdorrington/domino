@@ -46,7 +46,7 @@ def xarr_times_to_ints(time_coord):
 def lon_shift(da,name='lon'):
     da=da.copy()
     da.coords[name] = (da.coords[name] + 180) % 360 - 180
-    return da.sortby(da.lon)
+    return da.sortby(da[name])
 
 def load_pickle(p):
     with open(p, "rb") as handle: 

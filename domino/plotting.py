@@ -27,7 +27,7 @@ def cat_2d_plot(da,cmap=None,sig_da=None):
         labs=np.arange(da.shape[0])
     if cmap is None:
         cmap=plt.colormaps['coolwarm']
-   
+    N,M=da.shape
     p=da.plot(ax=ax,cmap=cmap)
    
     ax.set_yticks(np.arange(da.shape[0]))
@@ -40,8 +40,9 @@ def cat_2d_plot(da,cmap=None,sig_da=None):
         sig_da.plot(colors=[(0,0,0, 0.8),(1,1,1, 0.0)],levels=[-0.5,0.5,1.5],ax=ax)
         fig.axes[-1].remove()
         ax.set_position(pos)
+    ax.set_xlim(0.5,M-0.5)
+    ax.set_ylim(-0.5,N-0.5)
     return fig,ax
-
 
 def cat_1d_plot(da,cmap=None,colors=None,sig_da=None):
     if da.ndim!=1:
@@ -139,7 +140,9 @@ def contourf_grid(da,dims,**kwargs):
 
 def overlay_contour(da,ax,sig_da=None,**kwargs):
     L=da.shape[0]
-    for l,a in zip(np.arange(L),ax.T.reshape(-1)):
+    if np.ndim(ax)!=0:
+        ax=ax.T
+    for l,a in zip(np.arange(L),ax.reshape(-1)):
         c=da[l].copy()
         data=c.data
         if sig_da is not None:
@@ -147,3 +150,72 @@ def overlay_contour(da,ax,sig_da=None,**kwargs):
         c.data=data
         p=c.plot.contour(ax=a,**kwargs)
     return 
+
+
+def quickcontourf(da,proj=None,extents=None,clevs=None,ax=None,cmap=cm.balance,plot_kwargs={},sig_da=None,data_crs=None,fig=None,scale_fig=True):
+    
+    if da.ndim!=2:
+        raise(ValueError('quickplot assumes 2D data!'))
+        
+    if proj is None:
+        proj=__DEFAULT_PROJ__
+    if extents is None:
+        extents=__DEFAULT_EXTENTS__
+    if clevs is None:
+        lim=np.abs(da).max().values.item()*__VAR_SCALING__
+        clevs=np.linspace(-lim,lim,21)
+    if ax is None:
+        fig,ax=blank_carto_plot(proj=proj,fig=fig)
+    if data_crs is None:
+        data_crs=ccrs.PlateCarree()
+        
+    fig=plt.gcf()
+    
+    da.plot.contourf(transform=data_crs,levels=clevs,cmap=cmap,**plot_kwargs,ax=ax)
+    ax.set_extent(extents,crs=data_crs)
+    
+    #Shade over points that are False in a boolean da
+    if sig_da is not None:
+        sig_da.plot.contourf(transform=data_crs,levels=[0,0.5,1],colors=[(0,0,0,0.3),'none'],add_colorbar=False,ax=ax)
+        
+    ax.coastlines()
+
+    if scale_fig:
+        
+        dx=abs(extents[1]-extents[0])
+        dy=abs(extents[3]-extents[2])
+
+        scale_constant=0.03
+        cbar_const=2
+        fig.set_figwidth(scale_constant*dx+cbar_const)
+        fig.set_figheight(scale_constant*dy)
+    return fig,ax   
+
+def quickcontourfgrid(da,grid_dims,max_val=20,sig_da=None,proj=ccrs.PlateCarree(),fig=None,**quickplot_kwargs):
+    
+    fig,axes=blank_carto_plot(*grid_dims,proj,fig=fig)
+    L=da.shape[0]
+    if L>max_val:
+        raise(ValueError(f'Length of dataarray, {L}, exceeds max_val, {max_val}. If you are sure this is correct, change max_val.'))
+    
+    
+    for l,ax in zip(range(L),axes.T.reshape(-1)):
+        if sig_da is None:
+            quickcontourf(da[l],ax=ax,**quickplot_kwargs,scale_fig=False)
+        else:
+            quickcontourf(da[l],ax=ax,sig_da=sig_da[l],**quickplot_kwargs,scale_fig=False)
+
+    try:
+        extents=quickplot_kwargs['extents']
+        dx=abs(extents[1]-extents[0])
+        dy=abs(extents[3]-extents[2])
+    except:
+        dx=90
+        dy=90
+        
+    scale_constant=0.03
+    cbar_const=1
+    fig.set_figwidth((scale_constant*dx+cbar_const)*grid_dims[0])
+    fig.set_figheight(scale_constant*dy*grid_dims[1])
+    fig.tight_layout()
+    return fig,axes        

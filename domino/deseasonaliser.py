@@ -6,7 +6,7 @@ from scipy.optimize import leastsq
 import os
 import matplotlib.pyplot as plt
 import cftime
-from .util import xarr_times_to_ints
+from util import xarr_times_to_ints
 
 class Agg_Deseasonaliser(object):
     """
@@ -48,6 +48,21 @@ class Agg_Deseasonaliser(object):
         else:
             return arr.rolling({self.agg:w},min_periods=1,center=True).mean()
         
+class Agg_FlexiDeseasonaliser(Agg_Deseasonaliser):
+    """Modifies Agg_Deseasonaliser, with the ability
+    to handle custom summary funcs other than the mean.
+    summary_func must take an xarray.groupby object, and
+    accept a keyword 'dim'."""
+    
+    def fit_cycle(self,arr,summary_func,dim="time",agg="dayofyear"):
+        var=dim+"."+agg
+        self.data=arr
+        self.dim=dim
+        self.agg=agg
+        self.cycle_coeffs=summary_func(arr.groupby(var),dim=dim)
+        return
+
+    
 class Sinefit_Deseasonaliser(Agg_Deseasonaliser):
 
     """

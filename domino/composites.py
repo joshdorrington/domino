@@ -1,8 +1,11 @@
 import numpy as np
 import datetime as dt
 import xarray as xr
+import os
 import pandas as pd
 import cartopy.crs as ccrs
+from functools import partial
+from multiprocessing import Pool
 from util import holm_bonferroni_correction, offset_time_dim, standardise, is_two_valued,split_to_contiguous,is_time_type,make_all_dims_coords,drop_scalar_coords,squeeze_da
 from regime import xr_reg_occurrence,get_transmat,synthetic_states_from_transmat
 from sklearn.linear_model import LogisticRegression
@@ -31,12 +34,17 @@ class LaggedAnalyser(object):
             Arguments for adding variables to the LaggedAnalyser. Identical behaviour to calling add_variables directly.
 """
     
-    def __init__(self,event,variables=None,name=None,is_categorical=None):
+    def __init__(self,event,variables=None,name=None,is_categorical=None,nproc=1):
         """Create a LaggedAnalyser object."""
         
         #event is a dataarray
         self.event=xr.DataArray(event)
         
+        if nproc==-1:
+            self.nproc=os.cpu_count()-1
+        else:
+            self.nproc=nproc
+            
         #variables are stored in a dataset, and can be added later,
         #or passed as a DataArray, a Dataset or as a dict of DataArrays
         self.variables=xr.Dataset(coords=event.coords)
@@ -463,6 +471,7 @@ class LaggedAnalyser(object):
         ix_vals,ix_probs,L=self._get_bootparams(da)
         ds=ds[data_vars]
         ixs=self._get_synth_indices(bootnum,synth_mode,da,dim,ix_vals,ix_probs,L)
+                
         boots=[self._composite_from_ix(ix,ds,dim,con_func,cat_func,lag) for ix in ixs]
         return xr.concat(boots,'boot_num')
     
@@ -483,7 +492,7 @@ class LaggedAnalyser(object):
                 
         elif mode=='random':
             for n in range(bootnum):
-                ixs.append(np.random.choice(ix_vals,L,ix_probs))
+                ixs.append(np.random.choice(ix_vals,size=L,p=list(ix_probs)))
         else:
             raise(ValueError(f'synth_mode={synth_mode} is not valid.'))
             
@@ -536,7 +545,7 @@ class LaggedAnalyser(object):
     
     def bootstrap_significance(self,bootnum,p,dim='time',synth_mode='markov',reuse_lag0_boots=False,data_vars=None,hb_correction=False):
         
-        """A wrapper around *compute_bootstraps* and *test_significance*, that calculates bootstraps and applies a significance test to a number of time lagged composites simulataneously.
+        """A wrapper around *compute_bootstraps* and *get_significance*, that calculates bootstraps and applies a significance test to a number of time lagged composites simulataneously.
         
         **Arguments**
         
@@ -668,9 +677,10 @@ class LaggedAnalyser(object):
             return da
 
     def _set_shortlived_1s_in_ds_to_0(self,ds,nmin_dict):
-
-        for dim,nmin in nmin_dict.items():
-            ds=ds.map(self._set_shortlived_1s_in_da_to_0,args=[nmin,dim])
+        n_repeats=2 #This is a hack to fix a problem where the 1D filter doesnt know what other variables are doing.
+        for n in range(n_repeats):
+            for dim,nmin in nmin_dict.items():
+                ds=ds.map(self._set_shortlived_1s_in_da_to_0,args=[nmin,dim])
 
         return ds.astype(bool)
 

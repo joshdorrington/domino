@@ -18,6 +18,24 @@ def xr_reg_occurrence(da,dim='time',s=None,coord_name='regime'):
     
     return xr.DataArray(data=occ,coords={coord_name:np.arange(len(occ))},attrs=da.attrs)
 
+def xr_reg_number(da,dim='time',s=None,coord_name='regime'):
+
+    da=da.dropna(dim)
+    if s is None:
+        states=np.unique(da)
+    elif type(s)==xr.Dataset:
+        states=s[da.name].values
+        states=states[~np.isnan(states)]
+    else:
+        states=s
+        
+    if len(da)==0:
+        occ=np.zeros_like(states)
+    else:
+        occ=get_counts(da,state_combinations=states)
+    
+    return xr.DataArray(data=occ,coords={coord_name:np.arange(len(occ))},attrs=da.attrs)
+
 def reg_lens(state_arr):
     sa=np.asarray(state_arr)
     n=len(sa)
@@ -168,6 +186,26 @@ def get_occurrence(states,state_combinations=None):
     assert np.abs(np.sum(occ)-1)<1e-5
     return occ
 
+def get_counts(states,state_combinations=None):
+    
+    if np.ndim(states[0])==0:
+        states=np.atleast_2d(states)
+
+    states=np.array([a for b in states for a in b])
+    
+    if state_combinations is None:
+        state_combinations=np.unique(states)
+    K=len(state_combinations)
+    occ=np.zeros(K)
+
+    #We loop over transition matrix elements, using list comprehensions
+    #to unravel our list of sequences
+    for i,state in enumerate(state_combinations):
+        
+        occ[i]=sum(states==state)
+    
+    return occ
+
 #These are useful for batch computations:
 
 def get_transmat_numerator(states,state_combinations=None,exclude_diag=False):
@@ -233,9 +271,9 @@ def synthetic_states_from_transmat(T,L,init_its=50,state_labs=None):
     probs=np.random.rand(L)
     
     states=[s0]
+    Tcumsum=np.cumsum(T,axis=1)
     for l in range(L):
-        t=T[states[-1]]
-        states.append(np.digitize(probs[l],np.cumsum(t)).item())
+        states.append(np.digitize(probs[l],Tcumsum[states[-1]]).item())
         
     states=[state_labs[s] for s in states]
     return np.array(states)
