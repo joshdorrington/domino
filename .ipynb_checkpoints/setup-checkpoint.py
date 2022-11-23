@@ -1,6 +1,6 @@
 import setuptools
 
-with open("/data/ox5324/Domino/readme.md", "r", encoding="utf-8") as fh:
+with open("./readme.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
@@ -13,5 +13,5 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url='https://github.com/joshdorrington/domino',
     license='bsd-3-clause',
-    packages=setuptools.find_packages(exclude=['/data/ox5324/Domino/examples'])
+    packages=setuptools.find_packages(exclude=['./examples'])
 )
