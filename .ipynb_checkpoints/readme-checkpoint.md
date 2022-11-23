@@ -1,4 +1,5 @@
-# Domino is a package for analysing composites of atmospheric data. This is an experimental release!
+# Domino is a package for analysing composites of atmospheric data.
+## Based on xarray, Domino makes it easy to calculate lagged composites of fields and scalar indices around categorical event time series, and to compute bootstrapped confidence bounds. This is still an alpha release! While core functionality is stable, there could be some bugs!
 
 ## Documentation
 
@@ -18,5 +19,5 @@ https://github.com/joshdorrington/domino/blob/master/examples/advanced_usage.ipy
 
 domino can be installed using pip:
 ```
-python -m pip install "domino-composite==0.12"
+python -m pip install "domino-composite==0.14"
 ```
