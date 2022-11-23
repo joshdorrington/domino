@@ -1,0 +1,310 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>LaggedAnalyser Documention &#8212; domino-composite 0.12 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinxdoc.css" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">domino-composite 0.12 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href=""><strong>LaggedAnalyser Documention</strong></a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-composites">
+<span id="laggedanalyser-documention"></span><h1><strong>LaggedAnalyser Documention</strong><a class="headerlink" href="#module-composites" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="composites.LaggedAnalyser">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">composites.</span></span><span class="sig-name descname"><span class="pre">LaggedAnalyser</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_categorical</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#composites.LaggedAnalyser" title="Permalink to this definition">¶</a></dt>
+<dd><p>Analysis of lagged composites defined with respect to a categorical event series</p>
+<p><strong>Arguments:</strong></p>
+<dl class="simple">
+<dt><em>event</em></dt><dd><p>An xarray.DataArray with one dimension taking on categorical values, each defining a class of event (or non-event).</p>
+</dd>
+</dl>
+<p><strong>Optional arguments</strong></p>
+<p><em>variables, name, is_categorical</em></p>
+<blockquote>
+<div><p>Arguments for adding variables to the LaggedAnalyser. Identical behaviour to calling add_variables directly.</p>
+</div></blockquote>
+<dl class="py method">
+<dt class="sig sig-object py" id="composites.LaggedAnalyser.add_variable">
+<span class="sig-name descname"><span class="pre">add_variable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_categorical</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">join_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'outer'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#composites.LaggedAnalyser.add_variable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds an additional variable to LaggedAnalyser.variables.</p>
+<p><strong>Arguments</strong></p>
+<dl class="simple">
+<dt><em>variables</em> </dt><dd><p>An xarray.DataArray, xarray.Dataset or dictionary of xarray.DataArrays, containing data to be composited with respect to <em>event</em>. One of the coordinates of <em>variables</em> should have the same name as the coordinate of <em>events</em>. Stored internally as an xarray.Dataset. If a dictionary is passed, the DataArrays are joined according to the method ‘outer’.</p>
+</dd>
+</dl>
+<p><strong>Optional Arguments</strong></p>
+<dl>
+<dt><em>name</em> </dt><dd><p>A string. If <em>variables</em> is a single xarray.DataArray then <em>name</em> will be used as the name of the array in the LaggedAnalyser.variables DataArray. Otherwise ignored.</p>
+</dd>
+<dt><em>is_categorical</em> </dt><dd><p>An integer, if <em>variables</em> is an xarray.DataArray, or else a dictionary of integers with keys corresponding to DataArrays in the xarray.Dataset/dictionary. 0 indicates that the variable is continuous, and 1 indicates that it is categorical. Note that continuous and categorical variables are by default composited differently (see LaggedAnalyser.compute_composites). Default assumption is all DataArrays are continuous, unless a DataAarray contains an ‘is_categorical’ key in its DataArray.attrs, in which case this value is used.</p>
+</dd>
+<dt><em>overwrite</em></dt><dd><p>A boolean. If False then attempts to assign a variable who’s name is already in <em>LaggedAnalyser.variables</em> will result in a ValueError</p>
+</dd>
+<dt><em>join_type</em></dt><dd><p>A string setting the rules for how differences in the coordinate indices of different variables are handled:
+“outer”: use the union of object indexes
+“inner”: use the intersection of object indexes</p>
+<p>“left”: use indexes from the pre-existing <em>LaggedAnalyser.variables</em> with each dimension</p>
+<p>“right”: use indexes from the new <em>variables</em> with each dimension</p>
+<p>“exact”: instead of aligning, raise ValueError when indexes to be aligned are not equal</p>
+<p>“override”: if indexes are of same size, rewrite indexes to be those of the pre-existing <em>LaggedAnalyser.variables</em>. Indexes for the same dimension must have the same size in all objects.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="composites.LaggedAnalyser.lagged_variables">
+<span class="sig-name descname"><span class="pre">lagged_variables</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#composites.LaggedAnalyser.lagged_variables" title="Permalink to this definition">¶</a></dt>
+<dd><p>A convenience function that retrieves variables at lag <em>t</em> from the <em>LaggedAnalyser</em></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="composites.LaggedAnalyser.lag_variables">
+<span class="sig-name descname"><span class="pre">lag_variables</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">offsets</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset_unit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'days'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset_dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'time'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'any'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#composites.LaggedAnalyser.lag_variables" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produces time lags of <em>LaggedAnalyser.variables</em> which can be used to produce lagged composites.</p>
+<p><strong>Arguments</strong></p>
+<dl class="simple">
+<dt><em>offsets</em></dt><dd><p>An iterable of integers which represent time lags at which to lag <em>LaggedAnalyser.variables</em> in the units specified by <em>offset_unit</em>. Positive offsets denote variables <em>preceding</em> the event.</p>
+</dd>
+</dl>
+<p><strong>Optional arguments</strong></p>
+<dl class="simple">
+<dt><em>offset_unit</em></dt><dd><p>A string, defining the units of <em>offsets</em>. Valid options are weeks, days, hours, minutes, seconds, milliseconds, and microseconds.</p>
+</dd>
+<dt><em>offset_dim</em></dt><dd><p>A string, defining the coordinate of <em>LaggedAnalyser.variables</em> along which offsets are to be calculated.</p>
+</dd>
+<dt><em>mode</em></dt><dd><p>One of ‘any’, ‘past’, or ‘future’. If ‘past’ or ‘future’ is used then only positive or negative lags are valid, respectively.</p>
+</dd>
+<dt><em>overwrite</em></dt><dd><p>A boolean. If False, then attempts to produce a lag which already exist will raise a ValueError.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="composites.LaggedAnalyser.compute_composites">
+<span class="sig-name descname"><span class="pre">compute_composites</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dim='time'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lag_vals='all'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_anomaly=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">con_func=&lt;function</span> <span class="pre">mean_ds&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cat_func=&lt;function</span> <span class="pre">cat_occ_ds&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace=True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#composites.LaggedAnalyser.compute_composites" title="Permalink to this definition">¶</a></dt>
+<dd><p>Partitions <em>LaggedAnalyser.variables</em>, and time-lagged equivalents, into subsets depending on the value of <em>LaggedAnalyser.event</em>, and then computes a bulk summary metric for each.</p>
+<p><strong>Optional arguments</strong></p>
+<dl class="simple">
+<dt><em>dim</em></dt><dd><p>A string, the coordinate along which to compute composites.</p>
+</dd>
+<dt><em>lag_vals</em></dt><dd><p>Either ‘All’, or a list of integers, denoting the time lags for which composites should be computed.</p>
+</dd>
+<dt><em>as_anomaly</em></dt><dd><p>A Boolean, defining whether composites should be given as absolute values or differences from the unpartitioned value.</p>
+</dd>
+<dt><em>con_func</em></dt><dd><p>The summary metric to use for continuous variables. Defaults to a standard mean average. If None, then continuous variables will be ignored</p>
+</dd>
+<dt><em>cat_func</em></dt><dd><p>The summary metric to use for categorical variables. Defaults to the occurrence probability of each categorical value. If None, then continuous variables will be ignored</p>
+</dd>
+<dt><em>inplace</em></dt><dd><p>A boolean, defining whether the composite should be stored in <em>LaggedAnalyser.composites</em></p>
+</dd>
+<dt><strong>returns</strong></dt><dd><p>An xarray.Dataset like  <em>LaggedAnalyser.variables</em> but summarised according to <em>con_func</em> and <em>cat_func</em>, and with an additional coordinate <em>index_val</em>, which indexes over the values taken by <em>LaggedAnalyser.event</em>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="composites.LaggedAnalyser.aggregate_variables">
+<span class="sig-name descname"><span class="pre">aggregate_variables</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dim='time'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lag_vals='all'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">con_func=&lt;function</span> <span class="pre">mean_ds&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cat_func=&lt;function</span> <span class="pre">cat_occ_ds&gt;</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#composites.LaggedAnalyser.aggregate_variables" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates a summary metric from <em>LaggedAnalyser.variables</em> at all points where <em>LaggedAnalyser.event</em> is defined, regardless of its value.</p>
+<p><strong>Optional arguments</strong></p>
+<dl class="simple">
+<dt><em>dim</em></dt><dd><p>A string, the name of the shared coordinate between <em>LaggedAnalyser.variables</em> and <em>LaggedAnalyser.event</em>.</p>
+</dd>
+<dt><em>lag_vals</em></dt><dd><p>‘all’ or a iterable of integers, specifying for which lag values to compute the summary metric.</p>
+</dd>
+<dt><em>con_func</em></dt><dd><p>The summary metric to use for continuous variables. Defaults to a standard mean average. If None, then continuous variables will be ignored</p>
+</dd>
+<dt><em>cat_func</em></dt><dd><p>The summary metric to use for categorical variables. Defaults to the occurrence probability of each categorical value. If None, then continuous variables will be ignored</p>
+</dd>
+</dl>
+<p><strong>returns</strong></p>
+<blockquote>
+<div><p>An xarray.Dataset like  <em>LaggedAnalyser.variables</em> but summarised according to <em>con_func</em> and <em>cat_func</em>.</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="composites.LaggedAnalyser.add_derived_composite">
+<span class="sig-name descname"><span class="pre">add_derived_composite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">composite_vars</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_anomaly</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#composites.LaggedAnalyser.add_derived_composite" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies <em>func</em> to one or multiple composites to calculate composites of derived quantities, and additionally, stores <em>func</em> to allow derived bootstrap composites to be calculated. For linear quantities, where Ex[f(x)]==f(Ex[x]), then this can minimise redundant memory use.</p>
+<p><strong>Arguments</strong></p>
+<dl class="simple">
+<dt><em>name</em></dt><dd><p>A string, providing the name of the new variable to add.</p>
+</dd>
+<dt><em>func</em></dt><dd><p>A callable which must take 1 or more xarray.DataArrays as inputs</p>
+</dd>
+<dt><em>composite_vars</em></dt><dd><p>An iterable of strings, of the same length as the number of arguments taken by <em>func</em>. Each string must be the name of a variable in <em>LaggedAnalyser.variables</em> which will be passed into <em>func</em> in order.</p>
+</dd>
+</dl>
+<p><strong>Optional arguments</strong></p>
+<dl class="simple">
+<dt><em>as_anomaly</em></dt><dd><p>A boolean. Whether anomaly composites or full composites should be passed in to func.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="composites.LaggedAnalyser.compute_bootstraps">
+<span class="sig-name descname"><span class="pre">compute_bootstraps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bootnum</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim='time'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">con_func=&lt;function</span> <span class="pre">mean_ds&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cat_func=&lt;function</span> <span class="pre">cat_occ_ds&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lag=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">synth_mode='markov'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_vars=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reuse_ixs=False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#composites.LaggedAnalyser.compute_bootstraps" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes composites from synthetic event indices, which can be used to assess whether composites are insignificant.</p>
+<p><strong>Arguments</strong></p>
+<dl class="simple">
+<dt><em>bootnum</em></dt><dd><p>An integer, the number of bootstrapped composites to compute</p>
+</dd>
+</dl>
+<p><strong>Optional arguments</strong></p>
+<dl class="simple">
+<dt><em>dim</em></dt><dd><p>A string, the name of the shared coordinate between <em>LaggedAnalyser.variables</em> and <em>LaggedAnalyser.event</em>.</p>
+</dd>
+<dt><em>con_func</em></dt><dd><p>The summary metric to use for continuous variables. Defaults to a standard mean average. If None, then continuous variables will be ignored</p>
+</dd>
+<dt><em>cat_func</em></dt><dd><p>The summary metric to use for categorical variables. Defaults to the occurrence probability of each categorical value. If None, then continuous variables will be ignored</p>
+</dd>
+<dt><em>lag</em></dt><dd><p>An integer, specifying which lagged variables to use for the bootstraps. i.e. bootstraps for lag=90 will be from a completely different season than those for lag=0.</p>
+</dd>
+<dt><em>synth_mode</em></dt><dd><p>A string, specifying how synthetic event indices are to be computed. Valid options are:
+“random”: categorical values are randomly chosen with the same probability of occurrence as those found in <em>LaggedAnalyser.event</em>, but with no autocorrelation.
+‘markov’: A first order Markov chain is fitted to <em>LaggedAnalyser.event</em>, producing some autocorrelation and state dependence in the synthetic series. Generally a better approximation than “random” and so should normally be used.</p>
+</dd>
+<dt><em>data_vars</em></dt><dd><p>An iterable of strings, specifying for which variables bootstraps should be computed.</p>
+</dd>
+<dt><strong>returns</strong></dt><dd><p>An xarray.Dataset like <em>LaggedAnalyser.variables</em> but summarised according to <em>con_func</em> and <em>cat_func</em>, and with a new coordinate ‘bootnum’ of length <em>bootnum</em>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="composites.LaggedAnalyser.get_significance">
+<span class="sig-name descname"><span class="pre">get_significance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bootstraps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">comp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_vars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hb_correction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#composites.LaggedAnalyser.get_significance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes whether a composite is significant with respect to a given distribution of bootstrapped composites.</p>
+<p><strong>Arguments</strong></p>
+<blockquote>
+<div><dl class="simple">
+<dt><em>bootstraps</em></dt><dd><p>An xarray.Dataset with a coordinate ‘bootnum’</p>
+</dd>
+<dt><em>comp</em></dt><dd><p>An xarray Dataset of the same shape as <em>bootstraps</em> but without a ‘bootnum’ coordinate. Missing or additional variables are allowed, and are simply ignored.</p>
+</dd>
+<dt><em>p</em></dt><dd><p>A float, specifying the p-value of the 2-sided significance test (values in the range 0 to 1).</p>
+</dd>
+</dl>
+</div></blockquote>
+<p><strong>Optional arguments</strong></p>
+<dl class="simple">
+<dt><em>data_vars</em></dt><dd><p>An iterable of strings, specifying for which variables significance should be computed.</p>
+</dd>
+<dt><em>hb_correction</em></dt><dd><p>A Boolean, specifying whether a Holm-Bonferroni correction should be applied to <em>p</em>, in order to reduce the family-wide error rate. Note that this correction is currently only applied to each variable in <em>comp</em> independently, and so will have no impact on scalar variables.</p>
+</dd>
+<dt><strong>returns</strong></dt><dd><p>An xarray.Dataset like <em>comp</em> but with boolean data, specifying whether each feature of each variable passed the significance test.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="composites.LaggedAnalyser.bootstrap_significance">
+<span class="sig-name descname"><span class="pre">bootstrap_significance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bootnum</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'time'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">synth_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'markov'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reuse_lag0_boots</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_vars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hb_correction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#composites.LaggedAnalyser.bootstrap_significance" title="Permalink to this definition">¶</a></dt>
+<dd><p>A wrapper around <em>compute_bootstraps</em> and <em>get_significance</em>, that calculates bootstraps and applies a significance test to a number of time lagged composites simulataneously.</p>
+<p><strong>Arguments</strong></p>
+<dl class="simple">
+<dt><em>bootnum</em></dt><dd><p>An integer, the number of bootstrapped composites to compute</p>
+</dd>
+<dt><em>p</em></dt><dd><p>A float, specifying the p-value of the 2-sided significance test (values in the range 0 to 1).</p>
+</dd>
+</dl>
+<p><strong>Optional arguments</strong></p>
+<dl class="simple">
+<dt><em>dim</em></dt><dd><p>A string, the name of the shared coordinate between <em>LaggedAnalyser.variables</em> and <em>LaggedAnalyser.event</em>.</p>
+</dd>
+<dt><em>synth_mode</em></dt><dd><p>A string, specifying how synthetic event indices are to be computed. Valid options are:
+“random”: categorical values are randomly chosen with the same probability of occurrence as those found in <em>LaggedAnalyser.event</em>, but with no autocorrelation.
+‘markov’: A first order Markov chain is fitted to <em>LaggedAnalyser.event</em>, producing some autocorrelation and state dependence in the synthetic series. Generally a better approximation than “random” and so should normally be used.</p>
+</dd>
+<dt><em>reuse_lag0_boots</em></dt><dd><p>A Boolean. If True, bootstraps are only computed for lag=0, and then used as a null distribution to assess all lagged composites. For variables which are approximately stationary across the lag timescale, then this is a good approximation and can increase performance. However if used incorrectly, it may lead to ‘significant composites’ which simply reflect the seasonal cycle. if False, separate bootstraps are computed for all time lags.</p>
+</dd>
+<dt><em>data_vars</em></dt><dd><p>An iterable of strings, specifying for which variables significance should be computed.</p>
+</dd>
+<dt><em>hb_correction</em></dt><dd><p>A Boolean, specifying whether a Holm-Bonferroni correction should be applied to <em>p</em>, in order to reduce the family-wide error rate. Note that this correction is currently only applied to each variable in <em>comp</em> independently, and so will have no impact on scalar variables.</p>
+</dd>
+<dt><strong>returns</strong></dt><dd><p>An xarray.Dataset like <em>LaggedAnalyser.variables</em> but with the <em>dim</em> dimension summarised according to <em>con_func</em> and <em>cat_func</em>, an additional <em>lag</em> coordinate, and with boolean data specifying whether each feature of each variable passed the significance test.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/docs/.ipynb_checkpoints/composites-checkpoint.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">domino-composite 0.12 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href=""><strong>LaggedAnalyser Documention</strong></a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2022, Josh Dorrington.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.5.0.
+    </div>
+  </body>
+</html>
