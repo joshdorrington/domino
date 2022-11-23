@@ -1,0 +1,12 @@
+\indexentry{module@\spxentry{module}!composites@\spxentry{composites}|hyperpage}{1}
+\indexentry{composites@\spxentry{composites}!module@\spxentry{module}|hyperpage}{1}
+\indexentry{LaggedAnalyser (class in composites)@\spxentry{LaggedAnalyser}\spxextra{class in composites}|hyperpage}{1}
+\indexentry{add\_variable() (composites.LaggedAnalyser method)@\spxentry{add\_variable()}\spxextra{composites.LaggedAnalyser method}|hyperpage}{1}
+\indexentry{lagged\_variables() (composites.LaggedAnalyser method)@\spxentry{lagged\_variables()}\spxextra{composites.LaggedAnalyser method}|hyperpage}{2}
+\indexentry{lag\_variables() (composites.LaggedAnalyser method)@\spxentry{lag\_variables()}\spxextra{composites.LaggedAnalyser method}|hyperpage}{2}
+\indexentry{compute\_composites() (composites.LaggedAnalyser method)@\spxentry{compute\_composites()}\spxextra{composites.LaggedAnalyser method}|hyperpage}{2}
+\indexentry{aggregate\_variables() (composites.LaggedAnalyser method)@\spxentry{aggregate\_variables()}\spxextra{composites.LaggedAnalyser method}|hyperpage}{2}
+\indexentry{add\_derived\_composite() (composites.LaggedAnalyser method)@\spxentry{add\_derived\_composite()}\spxextra{composites.LaggedAnalyser method}|hyperpage}{3}
+\indexentry{compute\_bootstraps() (composites.LaggedAnalyser method)@\spxentry{compute\_bootstraps()}\spxextra{composites.LaggedAnalyser method}|hyperpage}{3}
+\indexentry{get\_significance() (composites.LaggedAnalyser method)@\spxentry{get\_significance()}\spxextra{composites.LaggedAnalyser method}|hyperpage}{3}
+\indexentry{bootstrap\_significance() (composites.LaggedAnalyser method)@\spxentry{bootstrap\_significance()}\spxextra{composites.LaggedAnalyser method}|hyperpage}{4}

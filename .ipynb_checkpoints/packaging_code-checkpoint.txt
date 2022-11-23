@@ -4,3 +4,9 @@ python -m twine upload --repository pypi dist/*0.13* --verbose
 git add ./
 git commit -m ""
 git push origin master
+
+sphinx-build -b html source docbuild
+sphinx-build -b latex source docbuild
+cd source
+make
+cd ..

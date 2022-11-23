@@ -1,0 +1,5 @@
+\select@language {english}
+\contentsline {chapter}{\numberline {1}\sphinxstylestrong {LaggedAnalyser Documention}}{1}{chapter.1}
+\contentsline {chapter}{\numberline {2}Indices and tables}{5}{chapter.2}
+\contentsline {chapter}{Python Module Index}{7}{section*.13}
+\contentsline {chapter}{Index}{9}{section*.14}

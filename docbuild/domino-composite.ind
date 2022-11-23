@@ -1,0 +1,40 @@
+\begin{sphinxtheindex}
+\let\bigletter\sphinxstyleindexlettergroup
+\let\spxpagem \sphinxstyleindexpagemain
+\let\spxentry \sphinxstyleindexentry
+\let\spxextra \sphinxstyleindexextra
+
+  \bigletter A
+  \item \spxentry{add\_derived\_composite()}\spxextra{composites.LaggedAnalyser method}, 
+		\hyperpage{3}
+  \item \spxentry{add\_variable()}\spxextra{composites.LaggedAnalyser method}, \hyperpage{1}
+  \item \spxentry{aggregate\_variables()}\spxextra{composites.LaggedAnalyser method}, \hyperpage{2}
+
+  \indexspace
+  \bigletter B
+  \item \spxentry{bootstrap\_significance()}\spxextra{composites.LaggedAnalyser method}, 
+		\hyperpage{4}
+
+  \indexspace
+  \bigletter C
+  \item \spxentry{composites}
+    \subitem \spxentry{module}, \hyperpage{1}
+  \item \spxentry{compute\_bootstraps()}\spxextra{composites.LaggedAnalyser method}, \hyperpage{3}
+  \item \spxentry{compute\_composites()}\spxextra{composites.LaggedAnalyser method}, \hyperpage{2}
+
+  \indexspace
+  \bigletter G
+  \item \spxentry{get\_significance()}\spxextra{composites.LaggedAnalyser method}, \hyperpage{3}
+
+  \indexspace
+  \bigletter L
+  \item \spxentry{lag\_variables()}\spxextra{composites.LaggedAnalyser method}, \hyperpage{2}
+  \item \spxentry{lagged\_variables()}\spxextra{composites.LaggedAnalyser method}, \hyperpage{2}
+  \item \spxentry{LaggedAnalyser}\spxextra{class in composites}, \hyperpage{1}
+
+  \indexspace
+  \bigletter M
+  \item \spxentry{module}
+    \subitem \spxentry{composites}, \hyperpage{1}
+
+\end{sphinxtheindex}
