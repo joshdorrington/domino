@@ -2,7 +2,7 @@
 
 ## Documentation
 
-See https://weather-domino.readthedocs.io/en/latest/docs/composites.html , or documentation.pdf in this repo
+See https://github.com/joshdorrington/domino/blob/master/docbuild/domino-composite.pdf
 
 ## Examples
 
@@ -12,7 +12,7 @@ https://github.com/joshdorrington/domino/blob/master/examples/basic_usage.ipynb
 
 A more in-depth discussion of how to customise the behaviour of the LaggedAnalyser class:
 
-https://github.com/joshdorrington/domino/blob/master/examples/advanced_precursors.ipynb
+https://github.com/joshdorrington/domino/blob/master/examples/advanced_usage.ipynb
 
 ## Install
 

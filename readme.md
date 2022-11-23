@@ -2,7 +2,7 @@
 
 ## Documentation
 
-See https://weather-domino.readthedocs.io/en/latest/docs/composites.html , or documentation.pdf in this repo
+See https://github.com/joshdorrington/domino/blob/master/docbuild/domino-composite.pdf
 
 ## Examples
 
