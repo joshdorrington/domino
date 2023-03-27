@@ -110,9 +110,6 @@ def event_from_datetimes(events,d1,d2,subset_dict={}):
     event_index=xr.DataArray(data=event_index,coords={'time':daterange})
     return event_index
 
-holm_bonferroni_correction,
-split_to_contiguous,
-is_time_type,
-make_all_dims_coords,
-drop_scalar_coords,
-squeeze_da
+def xarr_times_to_ints(time_coord):
+    conversion=(1000*cftime.UNIT_CONVERSION_FACTORS["day"])
+    return time_coord.to_numpy().astype(float)/conversion

@@ -1,5 +1,5 @@
 python -m build
-python -m twine upload --repository pypi dist/*0.13* --verbose
+python -m twine upload --repository pypi dist/*0.14* --verbose
 
 git add ./
 git commit -m ""
