@@ -780,6 +780,7 @@ class IndexGenerator(object):
             drop=(~indices.isnull()).sum()==0
             drop=[k for k,d in drop.to_dict()['data_vars'].items() if d['data']]
             indices=indices.drop_vars(drop)
+            _=[(self.means.pop(x),self.stds.pop(x)) for x in drop]
             
         return indices
     
@@ -814,7 +815,10 @@ class IndexGenerator(object):
         func=self._rename_function
         return index.rename({v:func(v,sl) for v in index.data_vars})
     
-    def get_standardisation_params(self):
-        
-        return self.means,self.stds
+    def get_standardisation_params(self,as_dict=False):
+        if as_dict:
+            return self.means,self.stds
+        else:
+            params=[xr.Dataset(self.means),xr.Dataset(self.stds)]
+            return xr.concat(params,'param').assign_coords({'param':['mean','std']})
         
