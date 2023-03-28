@@ -5,7 +5,7 @@ with open("/data/ox5324/Domino/readme.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name='domino-composite',
-    version='0.243',
+    version='0.244',
     author='Josh Dorrington',
     author_email='joshua.dorrington@kit.edu',
     description='A package for compositing atmospheric datasets',

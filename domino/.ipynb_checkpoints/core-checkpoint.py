@@ -251,8 +251,7 @@ class LaggedAnalyser(object):
         else:
                 comp=self._aggregate_from_ix(cat_ds,ix,dim,cat_func,cat_vals)
         comp.attrs=ds.attrs
-        return comp.assign_coords({'lag':[lag]})
-
+        return comp.assign_coords({'lag':[lag]})    
     
     #loops over all lags, calling _composite_from_ix, and assembles composites into a single dataset
     def _compute_aggregate_over_lags(self,da,dim,lag_vals,con_func,cat_func):
@@ -582,19 +581,28 @@ class LaggedAnalyser(object):
         return self.composite_sigs
     
     
-    def deseasonalise_variables(self,variable_list=None,dim='time'):
+    def deseasonalise_variables(self,variable_list=None,dim='time',agg='dayofyear',smooth=1,coeffs=None):
         if variable_list is None:
             variable_list=list(self.variables)
         for var in variable_list:
             da=self.variables[var]
             dsnlsr=Agg_Deseasonaliser()
-            dsnlsr.fit_cycle(da)
-            cycle=dsnlsr.evaluate_cycle(da[dim])
+            if coeffs is None:
+                dsnlsr.fit_cycle(da,dim=dim,agg=agg)
+            else:
+                dsnslr.cycle_coeffs=coeffs[var]
+                
+            cycle=dsnlsr.evaluate_cycle(data=da[dim],smooth=smooth)
             self.variables[var]=da.copy(data=da.data-cycle.data)
             dsnlsr.data=None #Prevents excess memory storage
             self.deseasonalisers_[var]=dsnlsr
         return
     
+    def get_seasonal_cycle_coeffs(self):
+        
+        coeffs=xr.Dataset({v:dsnlsr.cycle_coeffs for v,dsnlsr in self.deseasonalisers_.items()})
+        return coeffs
+
     #If deseasonalise_variables has been called, then this func can be used to compute the
     #seasonal mean state corresponding to a given composite. This mean state+ the composite
     # produced by self.compute_composites gives the full field composite pattern.
