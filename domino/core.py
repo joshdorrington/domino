@@ -9,7 +9,7 @@ import dateutil.relativedelta as durel
 from domino import agg
 from domino.categorical_analysis import get_transmat, synthetic_states_from_transmat
 from domino.util import holm_bonferroni_correction, split_to_contiguous, is_time_type, make_all_dims_coords, drop_scalar_coords, squeeze_da,offset_time_dim
-from domino.filtering import *
+from domino.filtering import ds_large_regions, convolve_pad_ds
 from domino.deseasonaliser import Agg_Deseasonaliser
 
 
@@ -633,7 +633,7 @@ class PatternFilter(object):
             self._parse_analyser(analyser)
             
     def __repr__(self):
-        'A PatternFilter object'
+        return 'A PatternFilter object'
         
     def __str__(self):
             return self.__repr__
@@ -662,10 +662,15 @@ class PatternFilter(object):
         self.update_mask(value_mask,mode)
         return
     
-    def apply_area_mask(self,n,dims=None,mode='intersection'):
+    def apply_area_mask(self,n,dims=None,mode='intersection',area_type='gridpoint'):
         
-        
-        area_mask=ds_large_regions(self.mask_ds,n,dims=dims)
+        if area_type=='gridpoint':
+            area_based=False
+        elif area_type=='spherical':
+            area_based=True
+        else:
+            raise(ValueError(f"Unknown area_type {area_type}. Valid options are 'gridpoint' and 'spherical'"))
+        area_mask=ds_large_regions(self.mask_ds,n,dims=dims,area_based=area_type)
         self.update_mask(area_mask,mode)
         return
     

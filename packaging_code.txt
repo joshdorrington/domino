@@ -10,3 +10,6 @@ sphinx-build -b latex source docbuild
 cd source
 make
 cd ..
+
+
+pip install domino-composite==0.24

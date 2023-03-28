@@ -113,3 +113,13 @@ def event_from_datetimes(events,d1,d2,subset_dict={}):
 def xarr_times_to_ints(time_coord):
     conversion=(1000*cftime.UNIT_CONVERSION_FACTORS["day"])
     return time_coord.to_numpy().astype(float)/conversion
+
+def restrict(ds,extent_dict):
+    ds=ds.copy()
+    for key in extent_dict:
+        if key in ds.dims:
+            xmin,xmax=extent_dict[key]
+
+            in_range=(ds[key].values>=xmin)&(ds[key].values<=xmax)
+            ds=ds.isel({key:in_range})
+    return ds
