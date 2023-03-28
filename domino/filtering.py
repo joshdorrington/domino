@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.ndimage import label
 import itertools as it
-
+import xarray as xr
 
 def latlonarea(lat0,lat1,lon0,lon1,r=6731):
     theta=np.deg2rad((lat1+lat0)/2)
