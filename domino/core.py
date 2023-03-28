@@ -739,7 +739,7 @@ class IndexGenerator(object):
             weights=np.cos(np.deg2rad(ix[lat_dim]))
             return ix.weighted(weights).sum(dims)
             
-    def generate(self,pattern_ds,series_ds,dim='time',ix_means=None,ix_stds=None,slices=None):
+    def generate(self,pattern_ds,series_ds,dim='time',ix_means=None,ix_stds=None,slices=None,drop_blank=False):
         #Parse inputs
         
         if slices is None:
@@ -767,6 +767,12 @@ class IndexGenerator(object):
         except:
             indices=xr.merge(indices,compat='override')
             print('Warning: merge of indices with "compat=override" required.\n Index dataset may have innacurrate metadata.')
+        #Optionally remove indices which are all nan    
+        if drop_blank:
+            drop=(~indices.isnull()).sum()==0
+            drop=[k for k,d in drop.to_dict()['data_vars'].items() if d['data']]
+            indices=indices.drop_vars(drop)
+            
         return indices
     
     def _generate_index(self,pattern_ds,series_ds,dim,sl):
