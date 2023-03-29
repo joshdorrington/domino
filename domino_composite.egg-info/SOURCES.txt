@@ -6,6 +6,7 @@ domino/core.py
 domino/deseasonaliser.py
 domino/filtering.py
 domino/indices.py
+domino/prediction.py
 domino/util.py
 domino_composite.egg-info/PKG-INFO
 domino_composite.egg-info/SOURCES.txt
