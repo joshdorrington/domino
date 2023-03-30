@@ -734,7 +734,9 @@ class IndexGenerator(object):
         return x/ref
     
     def standardise(self,x,dim='time',mean_ref=None,std_ref=None):
-        return self.normalise(self.centre(x,dim,mean_ref),dim,std_ref)
+        centred_x=self.centre(x,dim,mean_ref)
+        standardised_x=self.normalise(centred_x,dim,std_ref)
+        return standardised_x
         
     def collapse_index(self,ix,dims):
         lat_coords=['lat','latitude','grid_latitude']
@@ -747,7 +749,7 @@ class IndexGenerator(object):
             weights=np.cos(np.deg2rad(ix[lat_dim]))
             return ix.weighted(weights).sum(dims)
             
-    def generate(self,pattern_ds,series_ds,dim='time',ix_means=None,ix_stds=None,slices=None,drop_blank=False):
+    def generate(self,pattern_ds,series_ds,dim='time',ix_means=None,ix_stds=None,slices=None,drop_blank=False,in_place=True,strict_metadata=False):
         #Parse inputs
         
         if slices is None:
@@ -765,23 +767,29 @@ class IndexGenerator(object):
             self.user_params=False
             self.means={}
             self.stds={}
-
+            
+        self.indices=None
         
         #Compute indices
         indices=[self._generate_index(pattern_ds,series_ds,dim,sl)\
                 for sl in self.slices]
         try:
             indices=xr.merge(indices)
-        except:
-            indices=xr.merge(indices,compat='override')
-            print('Warning: merge of indices with "compat=override" required.\n Index dataset may have innacurrate metadata.')
+        except Exception as e:
+            if strict_metadata:
+                print("Merge of indices failed. Consider 'strict_metadata=False'")
+                raise e
+            else:
+                indices=xr.merge(indices,compat='override')
+            
         #Optionally remove indices which are all nan    
         if drop_blank:
             drop=(~indices.isnull()).sum()==0
             drop=[k for k,d in drop.to_dict()['data_vars'].items() if d['data']]
             indices=indices.drop_vars(drop)
             _=[(self.means.pop(x),self.stds.pop(x)) for x in drop]
-            
+        if in_place:
+            self.indices=indices
         return indices
     
     def _generate_index(self,pattern_ds,series_ds,dim,sl):
@@ -807,8 +815,20 @@ class IndexGenerator(object):
                 self.stds[v]=std[v]
                 
         index=self.standardise(index,dim,mean_ref=mean,std_ref=std)
-        self.generated_index=index
+        index=self._add_index_attrs(index,sl,mean,std)
+
         
+        self.generated_index=index
+        return index
+    
+    def _add_index_attrs(self,index,sl,mean,std):
+        for v in index:
+            ix=index[v]
+            ix.attrs['mean']=mean[v]
+            ix.attrs['std']=std[v]
+            for k,i in sl.items():
+                ix.attrs[k]=i
+            index[v]=ix
         return index
     
     def _rename_index_vars(self,index,sl):
@@ -821,4 +841,3 @@ class IndexGenerator(object):
         else:
             params=[xr.Dataset(self.means),xr.Dataset(self.stds)]
             return xr.concat(params,'param').assign_coords({'param':['mean','std']})
-        
