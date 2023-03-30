@@ -119,7 +119,7 @@ class PredictionTest(object):
         
         predictors=self.predictors
         target=self.predictand
-        predictors,target=xr.align(predictors.dropna('time'),target.dropna('time'))
+        predictors,target=xr.align(predictors.dropna('time',how='all'),target.dropna('time',how='all'))
         
         #train_pred,train_target,test_pred,test_target
         cv_iterator=self._split_data(predictors,target,cv_method,**cv_kwargs)
