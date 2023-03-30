@@ -123,3 +123,20 @@ def restrict(ds,extent_dict):
             in_range=(ds[key].values>=xmin)&(ds[key].values<=xmax)
             ds=ds.isel({key:in_range})
     return ds
+
+def offset_indices(indices,offsets=None,infer_offset=True,attr_kw=None,offset_unit='days'):
+    if offsets is None and not infer_offset:
+        raise(ValueError('offsets must be provided or infer_offset must be True'))
+    if attr_kw is None and infer_offset:
+        raise(ValueError('attr_kw must be specified for infer_offset'))
+    
+    if infer_offset:
+        offsets={v:indices[v].attrs[attr_kw] for v in indices.data_vars}
+    
+    da_arr=[]
+    for v in indices.data_vars:
+        da=indices[v]
+        l=offsets[v]
+        da_arr.append(offset_time_dim(da,-l,offset_unit))
+    ds=xr.merge(da_arr)
+    return ds
