@@ -586,8 +586,7 @@ class LaggedAnalyser(object):
     
     
     def deseasonalise_variables(self,variable_list=None,dim='time',agg='dayofyear',smooth=1,coeffs=None):
-
-         """Computes a seasonal cycle for each variable in *LaggedAnalyser.variables* and subtracts it inplace, turning *LaggedAnalyser.variables* into deseasonalised anomalies. The seasonal cycle is computed via temporal aggregation of each variable over a given period - by default the calendar day of the year. This cycle can then be smoothed with an n-point rolling average.
+        """Computes a seasonal cycle for each variable in *LaggedAnalyser.variables* and subtracts it inplace, turning *LaggedAnalyser.variables* into deseasonalised anomalies. The seasonal cycle is computed via temporal aggregation of each variable over a given period - by default the calendar day of the year. This cycle can then be smoothed with an n-point rolling average.
 
                 **Optional arguments**
 
@@ -607,6 +606,7 @@ class LaggedAnalyser(object):
                     A Dataset containing a precomputed seasonal cycle, which, if *LaggedAnalyser.variables* has coordinates (*dim*,[X,Y,...,Z]), has coords (*agg*,[X,Y,...,Z]), and has the same data variables as *LaggedAnalyser.variables*. If *coeffs* is provided, no seasonal cycle is fitted to *LaggedAnalyser.variables*, *coeffs* is used instead.
 
         """        
+
         if variable_list is None:
             variable_list=list(self.variables)
         for var in variable_list:
@@ -616,7 +616,7 @@ class LaggedAnalyser(object):
                 dsnlsr.fit_cycle(da,dim=dim,agg=agg)
             else:
                 dsnslr.cycle_coeffs=coeffs[var]
-                
+
             cycle=dsnlsr.evaluate_cycle(data=da[dim],smooth=smooth)
             self.variables[var]=da.copy(data=da.data-cycle.data)
             dsnlsr.data=None #Prevents excess memory storage
