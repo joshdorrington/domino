@@ -621,7 +621,8 @@ class LaggedAnalyser(object):
             self.variables[var]=da.copy(data=da.data-cycle.data)
             dsnlsr.data=None #Prevents excess memory storage
             self.deseasonalisers_[var]=dsnlsr
-        return    
+        return   
+    
     def get_seasonal_cycle_coeffs(self):
         """ Retrieve seasonal cycle coeffs computed with *LaggedAnalyser.deseasonalise_variables*, suitable for passing into *coeffs* in other *LaggedAnalyser.deseasonalise_variables* function calls as a precomputed cycle.
         
