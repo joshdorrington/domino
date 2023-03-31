@@ -730,27 +730,27 @@ class PatternFilter(object):
         return
                   
     def apply_value_mask(self,truth_function,*args,mode='intersection'):
-    """ Apply a filter to *PatternFilter.mask_ds* based on a user-specified truth function which is applied to *PatternFilter.val_ds. 
-            **Examples**
-                #Mask values beneath a threshold:
-                def larger_than_thresh(ds,thresh):
-                    return ds>thresh
-                patternfilter.apply_value_mask(is_positive,thresh)
-            
-                #Mask values where absolute value is less than a reference field:
-                def amp_greater_than_reference(ds,ref_ds):
-                    return np.abs(ds)>ref_ds
-                pattern_filter.apply_value_mask(amp_greater_than_reference,ref_ds)
-            
-            **Arguments**
+        """ Apply a filter to *PatternFilter.mask_ds* based on a user-specified truth function which is applied to *PatternFilter.val_ds. 
+                **Examples**
+                    #Mask values beneath a threshold:
+                    def larger_than_thresh(ds,thresh):
+                        return ds>thresh
+                    patternfilter.apply_value_mask(is_positive,thresh)
 
-                *truth_function*
-                A function with inputs (val_ds,*args) that returns a boolean dataset with the same coords and data variables as *PatternFilter.val_ds*.
-                
-            **Optional arguments**
-                *mode*
-                A string, one of 'replace','intersection' or 'union', defining how the value filter should be used to update the *PatternFilter.mask_ds*.
-            """        
+                    #Mask values where absolute value is less than a reference field:
+                    def amp_greater_than_reference(ds,ref_ds):
+                        return np.abs(ds)>ref_ds
+                    pattern_filter.apply_value_mask(amp_greater_than_reference,ref_ds)
+
+                **Arguments**
+
+                    *truth_function*
+                    A function with inputs (val_ds,*args) that returns a boolean dataset with the same coords and data variables as *PatternFilter.val_ds*.
+
+                **Optional arguments**
+                    *mode*
+                    A string, one of 'replace','intersection' or 'union', defining how the value filter should be used to update the *PatternFilter.mask_ds*.
+        """        
         if self.val_ds is None:
             raise(ValueError('val_ds must be provided to apply value mask.'))
         value_mask=truth_function(self.val_ds,*args)
