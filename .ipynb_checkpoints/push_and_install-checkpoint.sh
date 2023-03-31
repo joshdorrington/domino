@@ -5,5 +5,5 @@ pip install domino-composite==$version
 pip install domino-composite==$version
 
 git add ./
-git commit -m \"$1\"
+git commit -m "$1"
 git push origin master

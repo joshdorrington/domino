@@ -862,6 +862,9 @@ def _Dataset_to_dict(ds):
     return {v:d['data'] for v,d in ds.to_dict()['data_vars'].items()}
 
 class IndexGenerator(object):
+    
+    """ Computes dot-products between a Dataset of patterns and a Dataset of variables, reducing them to standardised scalar indices.
+    """
     def __init__(self):
         self._means=[]
         self._stds=[]
@@ -899,7 +902,42 @@ class IndexGenerator(object):
             weights=np.cos(np.deg2rad(ix[lat_dim]))
             return ix.weighted(weights).sum(dims)
             
-    def generate(self,pattern_ds,series_ds,dim='time',ix_means=None,ix_stds=None,slices=None,drop_blank=False,in_place=True,strict_metadata=False):
+    def generate(self,pattern_ds,series_ds,dim='time',slices=None,ix_means=None,ix_stds=None,drop_blank=False,in_place=True,strict_metadata=False):
+        """Compute standardised indices from an xarray.Dataset of patterns and an xarray.Dataset of arbitrary dimension variables.
+        
+        **Arguments**
+        
+        *pattern_ds*
+        
+        An xarray.Dataset of patterns to project onto with arbitrary dimensions.
+        
+        series_ds*
+        
+        An xarray.Dataset of variables to project onto the patterns. Coordinates of *series_ds* once subsetted using *slices* must match the dimensions of *pattern_ds* + the extra coord *dim*.
+        **Optional arguments**
+        
+        *dim*:
+        A string specifying the remaining coord of the scalar indices. Defaults to 'time', which should be the choice for most use cases.
+        
+        *slices*
+        A dictionary or iterable of dictionaries, each specifying a subset of *pattern_ds* to take before computing an index, with one index returned for each dictionary and for each variable. Subsetting is based on the *xr.Dataset.sel* method: e.g. *slices*=[dict(lag=0,index_val=1)] will produce 1 set of indices based on pattern_ds.sel(lag=0,index_val=1). If *slices*=None, no subsets are computed.
+        
+        *ix_means*
+        If None, the mean of each index is calculated and subtracted, resulting in centred indices. Otherwise, *ix_means* should be a dictionary of index names and predefined mean values which are subtracted instead. Of most use for online computations, updating a precomputed index in a new dataset.
+        
+        *ix_stds*
+        If None, the standard deviation of each index is calculated and is divided by, resulting in standardised indices. Otherwise, *ix_stds* should be a dictionary of index names and predefined std values which are divided by instead. Of most use for online computations, updating a precomputed index in a new dataset.
+
+        *drop_blank*
+        A boolean. If True, drop indices where the corresponding pattern is entirely blank. If False, returns an all np.nan time series.
+        *in_place*
+        
+        *strict_metadata*
+        If False, indices will be merged into a common dataset regardless of metadata. If True, nonmatching metadata will raise a ValueError.
+        
+        **Returns
+        An xarray.Dataset of indices with a single coordinate (*dim*).
+        """
         #Parse inputs
         
         if slices is None:
@@ -986,6 +1024,9 @@ class IndexGenerator(object):
         return index.rename({v:func(v,sl) for v in index.data_vars})
     
     def get_standardisation_params(self,as_dict=False):
+        
+        """ Retrieve index means and stds for computed indices, for use as future inputs into index_means or index_stds in *IndexGenerator.Generate*
+        """
         if as_dict:
             return self.means,self.stds
         else:
