@@ -586,7 +586,7 @@ class LaggedAnalyser(object):
     
     
     def deseasonalise_variables(self,variable_list=None,dim='time',agg='dayofyear',smooth=1,coeffs=None):
-        
+
          """Computes a seasonal cycle for each variable in *LaggedAnalyser.variables* and subtracts it inplace, turning *LaggedAnalyser.variables* into deseasonalised anomalies. The seasonal cycle is computed via temporal aggregation of each variable over a given period - by default the calendar day of the year. This cycle can then be smoothed with an n-point rolling average.
 
                 **Optional arguments**
@@ -621,8 +621,7 @@ class LaggedAnalyser(object):
             self.variables[var]=da.copy(data=da.data-cycle.data)
             dsnlsr.data=None #Prevents excess memory storage
             self.deseasonalisers_[var]=dsnlsr
-        return
-    
+        return    
     def get_seasonal_cycle_coeffs(self):
         """ Retrieve seasonal cycle coeffs computed with *LaggedAnalyser.deseasonalise_variables*, suitable for passing into *coeffs* in other *LaggedAnalyser.deseasonalise_variables* function calls as a precomputed cycle.
         
