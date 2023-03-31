@@ -14,7 +14,7 @@ from domino.deseasonaliser import Agg_Deseasonaliser
 
 
 class LaggedAnalyser(object):
-    """Analysis of lagged composites defined with respect to a categorical event series
+    """Computes lagged composites of variables with respect to a categorical categorical event series, with support for bootstrap resampling to provide a non-parametric assessment of composite significance, and for deseasonalisation of variables.
     
         **Arguments:**
         
@@ -72,7 +72,7 @@ class LaggedAnalyser(object):
         **Arguments**
         
         *variables* 
-            An xarray.DataArray, xarray.Dataset or dictionary of xarray.DataArrays, containing data to be composited with respect to *event*. One of the coordinates of *variables* should have the same name as the coordinate of *events*. Stored internally as an xarray.Dataset. If a dictionary is passed, the DataArrays are joined according to the method 'outer'.
+            An xarray.DataArray, xarray.Dataset or dictionary of xarray.DataArrays, containing data to be composited with respect to *event*. One of the coordinates of *variables* should have the same name as the coordinate of *events*. Stored internally as an xarray.Dataset. If a dictionary is passed, the DataArrays are joined according to the method *join_type* which defaults to 'outer'.
             
         **Optional Arguments**
         
@@ -83,7 +83,7 @@ class LaggedAnalyser(object):
             An integer, if *variables* is an xarray.DataArray, or else a dictionary of integers with keys corresponding to DataArrays in the xarray.Dataset/dictionary. 0 indicates that the variable is continuous, and 1 indicates that it is categorical. Note that continuous and categorical variables are by default composited differently (see LaggedAnalyser.compute_composites). Default assumption is all DataArrays are continuous, unless a DataAarray contains an 'is_categorical' key in its DataArray.attrs, in which case this value is used.
             
         *overwrite*
-            A boolean. If False then attempts to assign a variable who's name is already in *LaggedAnalyser.variables* will result in a ValueError
+            A boolean. If False then attempts to assign a variable who's name is already in *LaggedAnalyser.variables* will raise a ValueError
         
         *join_type*
             A string setting the rules for how differences in the coordinate indices of different variables are handled:
@@ -166,7 +166,7 @@ class LaggedAnalyser(object):
         raise(NotImplementedError('Only lagging along timelike dimensions is currently supported.'))
         
     def lag_variables(self,offsets,offset_unit='days',offset_dim='time',mode='any',overwrite=False):
-        """Produces time lags of *LaggedAnalyser.variables* which can be used to produce lagged composites.
+        """Produces time lags of *LaggedAnalyser.variables*, which can be used to produce lagged composites.
         
         **Arguments**
         
@@ -273,7 +273,7 @@ class LaggedAnalyser(object):
     def compute_composites(self,dim='time',lag_vals='all',as_anomaly=False,con_func=agg.mean_ds,cat_func=agg.cat_occ_ds,inplace=True):
         
         """
-        Partitions *LaggedAnalyser.variables*, and time-lagged equivalents, into subsets depending on the value of *LaggedAnalyser.event*, and then computes a bulk summary metric for each.
+        Partitions *LaggedAnalyser.variables*, and any time-lagged equivalents, into subsets depending on the value of *LaggedAnalyser.event*, and then computes a bulk summary metric for each.
 
         **Optional arguments**
         
@@ -290,7 +290,7 @@ class LaggedAnalyser(object):
             The summary metric to use for continuous variables. Defaults to a standard mean average. If None, then continuous variables will be ignored
             
         *cat_func*
-            The summary metric to use for categorical variables. Defaults to the occurrence probability of each categorical value. If None, then continuous variables will be ignored
+            The summary metric to use for categorical variables. Defaults to the occurrence probability of each categorical value. If None, then categorical variables will be ignored
             
         *inplace*
             A boolean, defining whether the composite should be stored in *LaggedAnalyser.composites*
@@ -398,11 +398,15 @@ class LaggedAnalyser(object):
 
         *lag*
             An integer, specifying which lagged variables to use for the bootstraps. i.e. bootstraps for lag=90 will be from a completely different season than those for lag=0.
+            
         *synth_mode*
             A string, specifying how synthetic event indices are to be computed. Valid options are:
+            
             "random": categorical values are randomly chosen with the same probability of occurrence as those found in *LaggedAnalyser.event*, but with no autocorrelation.
+            
             "markov": A first order Markov chain is fitted to *LaggedAnalyser.event*, producing some autocorrelation and state dependence in the synthetic series. Generally a better approximation than "random" and so should normally be used.
-            "shuffle": The values are randomly reordered. This means that each value will occur exactly the same amount of times as in the original ix, and so is ideal for particularly rare events or short series.
+            
+            "shuffle": The values are randomly reordered. This means that each value will occur exactly the same amount of times as in the original index, and so is ideal for particularly rare events or short series.
             
         *data_vars*
             An iterable of strings, specifying for which variables bootstraps should be computed.
@@ -487,12 +491,12 @@ class LaggedAnalyser(object):
     
     def get_significance(self,bootstraps,comp,p,data_vars=None,hb_correction=False):
         
-        """Computes whether a composite is significant with respect to a given distribution of bootstrapped composites.
+        """Computes whether a composite is significant with respect to a given distribution of bootstrapped composites. 
         
         **Arguments**
         
             *bootstraps*
-                An xarray.Dataset with a coordinate 'bootnum'
+                An xarray.Dataset with a coordinate 'bootnum', such as produced by *LaggedAnalyser.compute_bootstraps*
                 
             *comp*
                 An xarray Dataset of the same shape as *bootstraps* but without a 'bootnum' coordinate. Missing or additional variables are allowed, and are simply ignored.
@@ -582,6 +586,27 @@ class LaggedAnalyser(object):
     
     
     def deseasonalise_variables(self,variable_list=None,dim='time',agg='dayofyear',smooth=1,coeffs=None):
+        
+         """Computes a seasonal cycle for each variable in *LaggedAnalyser.variables* and subtracts it inplace, turning *LaggedAnalyser.variables* into deseasonalised anomalies. The seasonal cycle is computed via temporal aggregation of each variable over a given period - by default the calendar day of the year. This cycle can then be smoothed with an n-point rolling average.
+
+                **Optional arguments**
+
+                *variable_list*
+                    A list of variables to deseasonalise. Defaults to all variables in the *LaggedAnalyser.variables*
+
+                *dim*
+                    A string, the name of the shared coordinate between *LaggedAnalyser.variables* and *LaggedAnalyser.event*, along which the seasonal cycle is computed. Currently, only timelike coordinates are supported.
+                
+                *agg*
+                    A string specifying the datetime-like field to aggregate over. Useful and supported values are 'season', 'month', 'weekofyear', and 'dayofyear'
+                    
+                *smooth*
+                    An integer, specifying the size of the n-timestep centred rolling mean applied to the aggregated seasonal cycle. By default *smooth*=1 results in no smoothing.
+
+                *coeffs*
+                    A Dataset containing a precomputed seasonal cycle, which, if *LaggedAnalyser.variables* has coordinates (*dim*,[X,Y,...,Z]), has coords (*agg*,[X,Y,...,Z]), and has the same data variables as *LaggedAnalyser.variables*. If *coeffs* is provided, no seasonal cycle is fitted to *LaggedAnalyser.variables*, *coeffs* is used instead.
+
+        """        
         if variable_list is None:
             variable_list=list(self.variables)
         for var in variable_list:
@@ -599,7 +624,11 @@ class LaggedAnalyser(object):
         return
     
     def get_seasonal_cycle_coeffs(self):
+        """ Retrieve seasonal cycle coeffs computed with *LaggedAnalyser.deseasonalise_variables*, suitable for passing into *coeffs* in other *LaggedAnalyser.deseasonalise_variables* function calls as a precomputed cycle.
         
+        **Returns**
+        An xarray.Dataset, as specified in  the *LaggedAnalyser.deseasonalise_variables* *coeff* optional keyword.
+        """
         coeffs=xr.Dataset({v:dsnlsr.cycle_coeffs for v,dsnlsr in self.deseasonalisers_.items()})
         return coeffs
 
@@ -607,7 +636,13 @@ class LaggedAnalyser(object):
     #seasonal mean state corresponding to a given composite. This mean state+ the composite
     # produced by self.compute_composites gives the full field composite pattern.
     def get_composite_seasonal_mean(self):
-
+        """
+        If *LaggedAnalyser.deseasonalise_variables* has been called, then this function returns the seasonal mean state corresponding to a given composite, given by a sum of the seasonal cycle weighted by the time-varying occurrence of each categorical value in *LaggedAnalyser.events*. This mean state + the deseasonalised anomaly composite
+    produced by *LaggedAnalyser.compute_composites* then retrieves the full composite pattern.
+    
+        **Returns**
+            An xarray.Dataset containing the composite seasonal mean values.
+        """
         variable_list=list(self.deseasonalisers_)
         ts={e:self.event[self.event==e].time for e in np.unique(self.event)}
         lags=np.unique([0,*list(self._lagged_variables)])
@@ -628,18 +663,31 @@ class LaggedAnalyser(object):
         return xr.Dataset(mean_states)
         
 
-        
-
-
 class PatternFilter(object):
+    """Provides filtering methods to refine n-dimensional boolean masks, and apply them to an underlying dataset.
     
-    def __init__(self,analyser=None,mask_ds=None,val_ds=None):
+        **Optional arguments:**
+        *mask_ds*
+            An xarray boolean Dataset of arbitrary dimensions which provides the initial mask dataset. If *mask_ds*=None  and *analyser*=None, then *mask_ds* will be initialised as a Dataset of the same dimensions and data_vars as *val_ds*, with all values = 1 (i.e. initially unmasked). 
+        
+        *val_ds*
+            An xarray Dataset with the same dimensions as *mask_ds* if provided, otherwise arbitrary, consisting of an underlying dataset to which the mask is applied. If *val_ds*=None and *analyser*=None, then *PatternFilter.apply_value_mask* will raise an Error
+            
+        *analyser*
+            An instance of a domino.core.LaggedAnalyser class for which both composites and significance masks have been computed, used to infer the *val_ds* and *mask_ds* arguments respectively. This overrides any values passed explicitly to  *mask_ds* and *val_ds*.
+            
+    """
+    def __init__(self,mask_ds=None,val_ds=None,analyser=None):
         
         self.mask_ds=mask_ds
         self.val_ds=val_ds
         if analyser is not None:
             self._parse_analyser(analyser)
             
+        else:
+            if mask_ds is None:
+                self.mask_ds=self._mask_ds_like_val_ds()
+                
     def __repr__(self):
         return 'A PatternFilter object'
         
@@ -649,8 +697,27 @@ class PatternFilter(object):
     def _parse_analyser(self,analyser):
         self.mask_ds=analyser.composite_sigs
         self.val_ds=analyser.composites
+        
+    def _mask_ds_like_val_ds(self):
+        if self.val_ds is None:
+            raise(ValueError('At least one of "mask_ds", "val_ds" and "analyser" must be provided.'))
+        
+        x=self.val_ds
+        y=x.where(x!=0).fillna(1) #replace nans and 0s with 1
+        y=(y/y).astype(int) #make everything 1 via division and assert integer type.
+        self.mask_ds=y
+        return
     
     def update_mask(self,new_mask,mode):
+        """ Update *PatternFilter.mask_ds* with a new mask, either taking their union or intersection, or replacing the current mask with new_mask.
+        **Arguments**
+        
+            *new_mask*
+            An xarray.Dataset with the same coords and variables as *PatternFilter.mask_ds*.
+            
+            *mode*
+            A string, one of 'replace','intersection' or 'union', defining how *new_mask* should be used to update the mask.
+        """
         new_mask=new_mask.astype(int)
         if mode=='replace':
             self.mask_ds=new_mask
@@ -663,7 +730,27 @@ class PatternFilter(object):
         return
                   
     def apply_value_mask(self,truth_function,*args,mode='intersection'):
-        
+    """ Apply a filter to *PatternFilter.mask_ds* based on a user-specified truth function which is applied to *PatternFilter.val_ds. 
+            **Examples**
+                #Mask values beneath a threshold:
+                def larger_than_thresh(ds,thresh):
+                    return ds>thresh
+                patternfilter.apply_value_mask(is_positive,thresh)
+            
+                #Mask values where absolute value is less than a reference field:
+                def amp_greater_than_reference(ds,ref_ds):
+                    return np.abs(ds)>ref_ds
+                pattern_filter.apply_value_mask(amp_greater_than_reference,ref_ds)
+            
+            **Arguments**
+
+                *truth_function*
+                A function with inputs (val_ds,*args) that returns a boolean dataset with the same coords and data variables as *PatternFilter.val_ds*.
+                
+            **Optional arguments**
+                *mode*
+                A string, one of 'replace','intersection' or 'union', defining how the value filter should be used to update the *PatternFilter.mask_ds*.
+            """        
         if self.val_ds is None:
             raise(ValueError('val_ds must be provided to apply value mask.'))
         value_mask=truth_function(self.val_ds,*args)
@@ -671,7 +758,37 @@ class PatternFilter(object):
         return
     
     def apply_area_mask(self,n,dims=None,mode='intersection',area_type='gridpoint'):
+        """ Apply a filter to *PatternFilter.mask_ds* that identifies connected groups of True values within a subspace of the Dataset's dimensions specified by *dims*, and masks out groups which are beneath a threshold size *n*. This is done through the application of *scipy.ndimage.label* using the default structuring element (https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.label.html). 
+    
+        When *area_type*='gridpoint', *n* specifies the number of connected datapoints within each connected region. For the special case where *dims* consists of a latitude- and longitude-like coordinate, area_type='spherical' applies a cosine-latitude weighting, such that *n* can be interpreted as a measure of area, where a datapoint with lat=0 would have area 1. 
         
+        **Examples**
+            #Keep groups of True values consisting of an area >=30 square equatorial gridpoints
+            patternfilter.apply_area_mask(30,dims=('lat','lon'),area_type='spherical')
+            
+            #Keep groups of True values that are consistent for at least 3 neighbouring time lags
+            patternfilter.apply_area_mask(3,dims=('time'))
+            
+            #Keep groups of true values consisting of >=10 longitudinal values, or >=30 values in longitude and altitude if the variables have an altitude coord:
+            patternfilter.apply_area_mask(10,dims=('longitude'))
+            patternfilter.apply_area_mask(30,dims=('longitude,altitude'),mode='union')
+
+        **Arguments**
+
+            *n*
+            A scalar indicating the minimum size of an unmasked group, in terms of number of gridpoints (for *area_type*=gridpoint) or the weighted area (for *area_type*=spherical), beneath which the group will be masked.
+
+        **Optional arguments**
+            *dims*
+            An iterable of strings specifying coords in *PatternFilter.mask_ds* which define the subspace in which groups of connected True values are identified. Other dims will be iterated over. DataArrays within *PatternFilter.mask_ds* that do not contain all the *dims* will be ignored. If *dims*=None, all dims in each DataArray will be used.
+            
+            *mode*
+            A string, one of 'replace','intersection' or 'union', defining how the area filter should be used to update the *PatternFilter.mask_ds*.
+            
+            *area_type*
+            A string, one of 'gridpoint' or 'spherical' as specified above. 'spherical' is currently only supported for len-2 *dims* kwargs, with the first assumed to be latitude-like. 
+            
+        """        
         if area_type=='gridpoint':
             area_based=False
         elif area_type=='spherical':
@@ -683,16 +800,49 @@ class PatternFilter(object):
         return
     
     
-    def apply_convolution(self,n,dims=None,mode='replace'):
+    def apply_convolution(self,n,dims,mode='replace'):
+        """ Apply a square n-point convolution filter to *PatternFilter.mask_ds* in one or two dimensions specified by *dims*, iterated over remaining dimensions. This has the effect of extending the unmasked regions and smoothing the mask overall.
         
+        **Arguments**
+            *n*
+            A positive integer specifying the size of the convolution filter. *n*=1 leaves the mask unchanged. Even *n* are asymmetric and shifted right. 
+            
+            *dims*
+            A length 1 or 2 iterable of strings specifying the dims in which the convolution is applied. Other dims will be iterated over. DataArrays within *PatternFilter.mask_ds* that do not contain all the *dims* will be ignored. 
+            
+            *mode*
+            A string, one of 'replace','intersection' or 'union', defining how the area filter should be used to update the *PatternFilter.mask_ds*.
+        """
+        
+        if not len(dims) in [1,2]:
+            raise(ValueError('Only 1 and 2D dims currently supported'))
+            
         convolution=convolve_pad_ds(self.mask_ds,n,dims=dims)
         self.update_mask(convolution,mode)
         return
     
     def get_mask(self):
+        """" Retrieve the mask with all filters applied.
+        **Returns**
+        An xarray.Dataset of boolean values.
+        """
         return self.mask_ds
     
-    def filter(self,ds=None,drop_empty=True):
+    def filter(self,ds=None,drop_empty=True,fill_val=np.nan):
+        """ Apply the current mask to *ds* or to *PatternFilter.val_ds* (if *ds* is None), replacing masked gridpoints with *fill_val*.
+        **Optional arguments**
+        
+        *ds*
+        An xarray.Dataset to apply the mask to. Should have the same coords and data_vars as *PatternFilter.mask_ds*. If None, the mask is applied to *PatternFilter.val_ds*.
+        
+        *drop_empty*
+        A boolean value. If True, then completely masked variables are dropped from the returned masked Dataset.
+        *fill_val*
+        A scalar that defaults to np.nan. The value with which masked gridpoints in the Dataset are replaced.
+        
+        **Returns**
+        A Dataset with masked values replaced by *fill_val*.
+        """
         if ds is None:
             ds=self.val_ds.copy(deep=True)
             
@@ -700,22 +850,22 @@ class PatternFilter(object):
         if drop_empty:
             drop_vars=((~np.isnan(ds)).sum()==0).to_array('vars')
             ds=ds.drop_vars(drop_vars[drop_vars].vars.values)
-        return ds
+        return ds.fillna(fill_val)
     
-def DEFAULT_RENAME_FUNC(v,d):
+def _DEFAULT_RENAME_FUNC(v,d):
     
     for k,x in d.items():
         v=v+f'_{k}{x}'
     return v
     
-def Dataset_to_dict(ds):
+def _Dataset_to_dict(ds):
     return {v:d['data'] for v,d in ds.to_dict()['data_vars'].items()}
 
 class IndexGenerator(object):
     def __init__(self):
         self._means=[]
         self._stds=[]
-        self._rename_function=DEFAULT_RENAME_FUNC
+        self._rename_function=_DEFAULT_RENAME_FUNC
         
     def __repr__(self):
         return 'An IndexGenerator object'
@@ -807,8 +957,8 @@ class IndexGenerator(object):
             mean=self.means
             std=self.stds
         else:
-            mean=Dataset_to_dict(index.mean(dim))
-            std=Dataset_to_dict(index.std(dim))
+            mean=_Dataset_to_dict(index.mean(dim))
+            std=_Dataset_to_dict(index.std(dim))
             for v in mean:
                 self.means[v]=mean[v]
             for v in std:

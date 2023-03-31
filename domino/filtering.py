@@ -65,7 +65,6 @@ def get_large_regions(grid,point_thresh):
         connected[connected==m]=0
     return connected>0
 
-#area in units of solid angle
 def get_area_regions(grid,area_thresh,area):
     connected,ncon=label(grid)
     connected=connected.astype(float)
@@ -81,9 +80,15 @@ def get_area_regions(grid,area_thresh,area):
 
 
 def da_large_regions(da,n,dims,area_based=False):
+    
     if area_based:
+        
+        if len(dims)!=2:
+            raise(ValueError('Area weighted n currently only supported for two dimensions, assumed to be (lat,lon)'))
+        lat,lon=dims
         #area in units of solid angle
-        area=grid_area(da,r=1)
+        area=grid_area(da,lat_coord=lat,lon_coord=lon,r=1)
+        
         return apply_2d_func_to_da(da,get_area_regions,n,area,dims=dims)
     else:
         return apply_2d_func_to_da(da,get_large_regions,n,dims=dims)
@@ -95,8 +100,8 @@ def ds_large_regions(mask_ds,n,dims,area_based=False):
         return ds
 
 def convolve_pad(x,N):
-    Y=np.array([np.convolve(y,np.ones(N),mode='same') for y in x])
-    Y=np.array([np.convolve(y,np.ones(N),mode='same') for y in Y.T]).T
+    Y=np.array([np.convolve(y,np.ones(np.min([N,len(y)])),mode='same') for y in x])
+    Y=np.array([np.convolve(y,np.ones(np.min([N,len(y)])),mode='same') for y in Y.T]).T
     Y[Y>0]=1
     return Y
 

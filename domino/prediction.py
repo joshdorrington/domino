@@ -9,7 +9,7 @@ def CV_None(predictors,target,**cv_kwargs):
 
 def CV_drop1year(predictors,target,**cv_kwargs):
     
-    X,y=xr.align(predictors,target)
+    X,y=xr.align(predictors.dropna('time',how='all'),target.dropna('time',how='all'))
     years=np.unique(X['time.year'])
     iters=[]
     for t in years:
@@ -59,8 +59,14 @@ def blank_score(det_pred,prob_pred,target):
     return len(target)
 
 def ROC_AUC(det_pred,prob_pred,target,**score_kwargs):
+    
+    #No ROC_AUC for a variable with only one value
+    if len(np.unique(target))==1:
+        return np.nan
     if len(np.unique(target))==2:
         prob_pred=prob_pred[:,1]
+        
+    
     return roc_auc_score(target,prob_pred,**score_kwargs)
 
 class PredictionTest(object):
@@ -84,6 +90,7 @@ class PredictionTest(object):
             sklearn_roc_auc=ROC_AUC,
             test=blank_score
         )
+        self.computed_scores=None
         return
     
     def __repr__(self):
@@ -155,6 +162,8 @@ class PredictionTest(object):
             score_da.append(xr.Dataset(scores))
             model_da.append(models)
         score_da=xr.concat(score_da,'cv')
+        self.computed_scores=score_da
+
         if keep_models:
             return score_da,model_da
         else:
@@ -211,3 +220,20 @@ class PredictionTest(object):
         
         cv_iterator=cv_method(predictors,target,**cv_kwargs)
         return cv_iterator
+    
+    def add_score_to_index_metadata(self,indices,label='score',raise_on_missing_var=False,reduce_func=np.nanmean):
+        s=self.computed_scores
+        if s is None:
+            raise(ValueError('No scores computed.'))
+        for var in s.data_vars:
+            
+            score=s[var].values
+            try:
+                indices[var].attrs[label]=reduce_func(score)
+            except:
+                if raise_on_missing_var:
+                    raise(ValueError(f'Key {var} present in self.computed_scores but not in indices.'))
+                pass
+        return
+        
+        
