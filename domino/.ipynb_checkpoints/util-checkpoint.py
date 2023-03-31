@@ -4,22 +4,29 @@ import numpy as np
 import xarray as xr
 import itertools
 
-def squeeze_da(da):   
+def squeeze_da(da):  
+    """ Remove length 1 coords from a DataArray"""
     return da.drop([c for c in da.coords if np.size(da[c])==1])
 
 def drop_scalar_coords(ds):
+    """ Remove coords without dimensions from Dataset"""
     for v in [v for v in list(ds.coords) if ds[v].size<2]:
         ds=ds.drop(v)
     return ds
 
 def make_all_dims_coords(da):
+    """Convert all dims to coords"""
     return da.assign_coords({v:da[v] for v in da.dims})
 
 #Takes a scalar input!
 def is_time_type(x):
     return (isinstance(x,dt.date) or isinstance(x,np.datetime64))
 
-def offset_time_dim(da,offset,offset_unit='days',offset_dim='time',deep=False):
+def offset_time_dim(da,offset,offset_unit='days',offset_dim='time',deep=False):#
+    """Shifts the time-like *offset_dim* coord of *da* by *offset* *offset_units*.
+    
+    e.g. offset_time_dim(da,3,'days'), adds three days to the time axis of da."""
+    
     time_offset=dt.timedelta(**{offset_unit:offset})
     new_dim=pd.to_datetime(da[offset_dim])+time_offset
     new_da=da.copy(deep=deep)
@@ -115,6 +122,7 @@ def xarr_times_to_ints(time_coord):
     return time_coord.to_numpy().astype(float)/conversion
 
 def restrict(ds,extent_dict):
+    """ Subset the coords of a Dataset *ds*, using *extent_dict*, a dictionary of the form {coord:[lower_bound,upper_bound],...}."""
     ds=ds.copy()
     for key in extent_dict:
         if key in ds.dims:
@@ -124,7 +132,8 @@ def restrict(ds,extent_dict):
             ds=ds.isel({key:in_range})
     return ds
 
-def offset_indices(indices,offsets=None,infer_offset=True,attr_kw=None,offset_unit='days'):
+def offset_indices(indices,offsets=None,infer_offset=True,attr_kw=None,offset_unit='days',dim='time'):
+    """For a Dataset *indices* and either a dictionary of *offsets* ({data_var:offset,...}) or offsets stored in an attribute *attr_kw*, offset each index along the *dim* coord and take their union."""
     if offsets is None and not infer_offset:
         raise(ValueError('offsets must be provided or infer_offset must be True'))
     if attr_kw is None and infer_offset:
@@ -137,6 +146,6 @@ def offset_indices(indices,offsets=None,infer_offset=True,attr_kw=None,offset_un
     for v in indices.data_vars:
         da=indices[v]
         l=offsets[v]
-        da_arr.append(offset_time_dim(da,-l,offset_unit))
+        da_arr.append(offset_time_dim(da,-l,offset_unit,offset_dim=dim))
     ds=xr.merge(da_arr)
     return ds
