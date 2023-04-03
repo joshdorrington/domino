@@ -74,11 +74,11 @@ class PLSR_Reduction(object):
         model=skcc.PLSRegression(n_components=self.mode_num)
         model.fit(self.X.values,self.y.values)
         rotations=model.x_rotations_
-        coords={d1:self.X[d1].values,'PLSR_mode':range(1,mode_num+1)}
+        coords={d1:self.X[d1].values,'PLSR_mode':range(1,self.mode_num+1)}
         rotation_da=xr.DataArray(data=rotations,coords=coords,dims=[d1,'PLSR_mode'])
 
         plsr_X=self.X.values@rotations
-        plsr_X=xr.DataArray(data=plsr_X,coords={sample_dim:self.X[sample_dim],'PLSR_mode':range(1,mode_num+1)})
+        plsr_X=xr.DataArray(data=plsr_X,coords={sample_dim:self.X[sample_dim],'PLSR_mode':range(1,self.mode_num+1)})
         
         self.rotations=rotations
         self.rotation_da=rotation_da
@@ -112,7 +112,7 @@ class PLSR_Reduction(object):
         
         d0,d1=X.dims
         proj_plsr_X=X.values@self.rotations
-        proj_plsr_X=xr.DataArray(data=proj_plsr_X,coords={self.sample_dim:X[self.sample_dim],'PLSR_mode':range(1,mode_num+1)})
+        proj_plsr_X=xr.DataArray(data=proj_plsr_X,coords={self.sample_dim:X[self.sample_dim],'PLSR_mode':range(1,self.mode_num+1)})
         return proj_plsr_X
     
     def project_pattern(self,X):
