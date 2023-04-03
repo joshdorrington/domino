@@ -166,11 +166,17 @@ class PredictionTest(object):
         return (*score_da*,*model_da*)
         """
         if np.ndim(predictor_variables)==1:
-            score_labels=predictor_variables
+            el_type=[np.ndim(element) for element in predictor_variables]
+            
+            if len(np.unique(el_type))==1 and np.unique(el_type)==1:#a list of ragged lists
+                score_labels=[f'predictor_set_{i+1}' for i in range(len(predictor_variables))]
+                
+            else:#just a list
+                score_labels=predictor_variables
             
         elif np.ndim(predictor_variables)==2:
             score_labels=[f'predictor_set_{i+1}' for i in range(len(predictor_variables))]
-            
+
         elif predictor_variables =='univariate':
             predictor_variables = list(self.predictors.data_vars)
             score_labels=list(self.predictors.data_vars)

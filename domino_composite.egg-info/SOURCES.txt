@@ -5,6 +5,7 @@ domino/categorical_analysis.py
 domino/core.py
 domino/deseasonaliser.py
 domino/filtering.py
+domino/plsr.py
 domino/prediction.py
 domino/util.py
 domino_composite.egg-info/PKG-INFO
