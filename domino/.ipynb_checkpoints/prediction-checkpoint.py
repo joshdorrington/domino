@@ -41,6 +41,12 @@ def CV_n_chunks(predictors,target,N=2):
         iters.append([X_train,y_train,X_test,y_test])
     return iters
 
+def CV_manual(train_pred,train_targ,test_pred=None,test_targ=None):
+    
+    if test_pred is None or test_targ is None:
+        raise(ValueError('Both test_pred and test_targ must be specified when using CV_manual'))
+    return [[train_pred,train_targ,test_pred,test_targ]]
+
 def log_regression_model(X_train,y_train,X_test,**model_kwargs):
     
     LR=LogisticRegression(**model_kwargs)
@@ -94,7 +100,8 @@ class PredictionTest(object):
         
         self.predefined_cv_methods=dict(
             nchunks=CV_n_chunks,
-            drop_year=CV_drop1year
+            drop_year=CV_drop1year,
+            manual=CV_manual
         )
         
         self.predefined_scores=dict(
@@ -137,6 +144,7 @@ class PredictionTest(object):
             A string specifying a predefined cross-validation method, a custom cross-validation function with corresponding signature, or None, in which case no cross-validation is used (the training and test datasets are the same). Predefined cross-validation methods are:
                 *nchunks* - Divide the dataset into *n* chunks, using each as the test dataset predicted by the other *n*-1 chunks, to produce *n* total skill estimates. *n* defaults to 2, and is specified in *cv_kwargs*
                 *drop_year* - Split the dataset by calendar year, using each year as the test dataset predicted by the remaining years.
+                *manual* - Treat *predictors* and *predictand* as training data. Test data must be passed explicitly via *cv_kwargs* as *test_pred* and *test_targ*.
             If a custom function is passed it must have the following signature:
             Input: predictors (a Dataset), target (a DataArray), and an arbitrary number of keyword arguments.
             Output: A train predictor Dataset, a train target DatArray, a test predictor Dataset, and a test target DataArray.
