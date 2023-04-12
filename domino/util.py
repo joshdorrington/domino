@@ -146,6 +146,8 @@ def offset_indices(indices,offsets=None,infer_offset=True,attr_kw=None,offset_un
     for v in indices.data_vars:
         da=indices[v]
         l=offsets[v]
+        if type(l)====np.int_:
+            l=int(l) #datetime can't handle np.ints, no idea why not.
         da_arr.append(offset_time_dim(da,-l,offset_unit,offset_dim=dim))
     ds=xr.merge(da_arr)
     return ds
