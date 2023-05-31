@@ -14,7 +14,10 @@ def latlonarea(lat0,lat1,lon0,lon1,r=6731):
 def grid_area(da,lat_coord='lat',lon_coord='lon',r=6371):
     lat=da[lat_coord].values
     lon=da[lon_coord].values
-    dlon=(lon[1:]-lon[:-1])/2
+    
+    #If coords are descending, we sort that out by
+    #just taking absolute value of the final area
+    dlon=(lon[1:]-lon[:-1])/2 
     dlat=(lat[1:]-lat[:-1])/2
     dlon=[np.median(dlon),*dlon]
     dlat=[np.median(dlat),*dlat]
@@ -23,8 +26,8 @@ def grid_area(da,lat_coord='lat',lon_coord='lon',r=6371):
         for la,dla in zip(lat,dlat)]\
         for lo,dlo in zip(lon,dlon)])
     area=xr.DataArray(data=areas.T,\
-        coords={lat_coord:lat,lon_coord:lon})
-    return area
+        coords={lat_coord:lat,lon_coord:lon},dims=[lat_coord,lon_coord])
+    return np.abs(area)
 
 
 def apply_2d_func_to_da(da,func,*args,dims=None):
