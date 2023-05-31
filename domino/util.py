@@ -28,9 +28,12 @@ def offset_time_dim(da,offset,offset_unit='days',offset_dim='time',deep=False):#
     e.g. offset_time_dim(da,3,'days'), adds three days to the time axis of da."""
     
     time_offset=dt.timedelta(**{offset_unit:offset})
-    new_dim=pd.to_datetime(da[offset_dim])+time_offset
+    
+    #rewritten to handle older pandas versions that don't play nicely with dataarrays
+    offset_dim_vals=pd.to_datetime(da[offset_dim].values)+time_offset
     new_da=da.copy(deep=deep)
-    new_da[offset_dim]=new_dim
+    new_da=new_da.assign_coords({offset_dim:offset_dim_vals})
+    
     return new_da
 
 
