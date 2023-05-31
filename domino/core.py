@@ -12,7 +12,6 @@ from domino.util import holm_bonferroni_correction, split_to_contiguous, is_time
 from domino.filtering import ds_large_regions, convolve_pad_ds
 from domino.deseasonaliser import Agg_Deseasonaliser
 
-
 class LaggedAnalyser(object):
     """Computes lagged composites of variables with respect to a categorical categorical event series, with support for bootstrap resampling to provide a non-parametric assessment of composite significance, and for deseasonalisation of variables.
     
@@ -154,11 +153,9 @@ class LaggedAnalyser(object):
         #We are really paranoid about mixing up our lags. So we implement this safety check
         self._check_offset_is_valid(offset,mode)
         
-        #The meat of the function:  BREAKING CHANGE WITH RESPECT TO PREVIOUS VERSION
-        time_offset=durel.relativedelta(**{offset_unit:offset})
-        new_dim=pd.to_datetime(self.variables[offset_dim]).map(lambda t: t- time_offset) #THIS USED TO BE +time_offset
-        self._lagged_variables[offset]=self.variables.copy(deep=False)
-        self._lagged_variables[offset][offset_dim]=new_dim
+        #REPLACED PREVIOUS IMPLEMENTATION WITH EQUIVALENT UTIL IMPORT.
+        self._lagged_variables[offset]=offset_time_dim(self.variables,-offset,offset_unit=offset_unit,offset_dim=offset_dim)
+
         return
     
     #For coords not in a time format
@@ -652,17 +649,21 @@ class LaggedAnalyser(object):
             dsnlsr=self.deseasonalisers_[var]
             agg=dsnlsr.agg
             mean_states[var]=xr.concat([\
-                             xr.concat([\
-                                    self.deseasonalisers_[var].cycle_coeffs.sel(\
-                                    {agg:getattr(pd.to_datetime(t).map(\
-                                        lambda ti: ti+durel.relativedelta(**{self.offset_unit:int(l)})),agg)}\
-                                    ).mean(agg).assign_coords({'lag':l,'index_val':i})\
-                            for l in lags],'lag')\
+                                 xr.concat([\
+                                    self._lag_average_cycle(dsnlsr,agg,l,t,i)\
+                                for l in lags],'lag')\
                             for i,t in ts.items()],'index_val')
             
         return xr.Dataset(mean_states)
         
-
+    def _lag_average_cycle(self,dsnlsr,agg,l,t,i):
+        
+        dt=durel.relativedelta(**{self.offset_unit:int(l)})
+        tvals=pd.to_datetime([pd.to_datetime(tt)+dt for tt in t.values])
+        cycle_eval=dsnlsr.cycle_coeffs.sel({agg:getattr(tvals,agg)})
+        cycle_mean=cycle_eval.mean(agg).assign_coords({'lag':l,'index_val':i})
+        return cycle_mean
+    
 class PatternFilter(object):
     """Provides filtering methods to refine n-dimensional boolean masks, and apply them to an underlying dataset.
     
@@ -674,7 +675,7 @@ class PatternFilter(object):
             An xarray Dataset with the same dimensions as *mask_ds* if provided, otherwise arbitrary, consisting of an underlying dataset to which the mask is applied. If *val_ds*=None and *analyser*=None, then *PatternFilter.apply_value_mask* will raise an Error
             
         *analyser*
-            An instance of a domino.core.LaggedAnalyser class for which both composites and significance masks have been computed, used to infer the *val_ds* and *mask_ds* arguments respectively. This overrides any values passed explicitly to  *mask_ds* and *val_ds*.
+            An instance of a  core.LaggedAnalyser class for which both composites and significance masks have been computed, used to infer the *val_ds* and *mask_ds* arguments respectively. This overrides any values passed explicitly to  *mask_ds* and *val_ds*.
             
     """
     def __init__(self,mask_ds=None,val_ds=None,analyser=None):
@@ -795,7 +796,7 @@ class PatternFilter(object):
             area_based=True
         else:
             raise(ValueError(f"Unknown area_type {area_type}. Valid options are 'gridpoint' and 'spherical'"))
-        area_mask=ds_large_regions(self.mask_ds,n,dims=dims,area_based=area_type)
+        area_mask=ds_large_regions(self.mask_ds,n,dims=dims,area_based=area_based)
         self.update_mask(area_mask,mode)
         return
     
@@ -1012,8 +1013,8 @@ class IndexGenerator(object):
     def _add_index_attrs(self,index,sl,mean,std):
         for v in index:
             ix=index[v]
-            ix.attrs['mean']=mean[v]
-            ix.attrs['std']=std[v]
+            ix.attrs['mean']=np.array(mean[v])
+            ix.attrs['std']=np.array(std[v])
             for k,i in sl.items():
                 ix.attrs[k]=i
             index[v]=ix
