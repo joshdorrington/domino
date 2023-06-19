@@ -795,7 +795,7 @@ class PatternFilter(object):
             area_based=True
         else:
             raise(ValueError(f"Unknown area_type {area_type}. Valid options are 'gridpoint' and 'spherical'"))
-        area_mask=ds_large_regions(self.mask_ds,n,dims=dims,area_based=area_type)
+        area_mask=ds_large_regions(self.mask_ds,n,dims=dims,area_based=area_based)
         self.update_mask(area_mask,mode)
         return
     

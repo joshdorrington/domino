@@ -88,7 +88,7 @@ class PredictionTest(object):
     *predictand*
     An xarray DataArray with a shared coord to *predictors*.
     """
-    def __init__(self,predictors,predictand):
+    def __init__(self,predictors,predictand,tolerate_empty_variables=False):
         
         self.predictand=self._predictand_to_dataarray(predictand)
         self.predictors=self._predictors_to_dataset(predictors)
@@ -109,6 +109,8 @@ class PredictionTest(object):
             test=blank_score
         )
         self.computed_scores=None
+        
+        self.tol_empty=tolerate_empty_variables
         return
     
     def __repr__(self):
@@ -122,6 +124,14 @@ class PredictionTest(object):
     def _predictors_to_dataset(self,predictors):
         return predictors
     
+    def _handle_potentially_empty_variable_list(self,vlist):
+        if len(vlist)>0:
+            return 0
+        else:
+            if self.tol_empty:
+                return 1
+            raise(ValueError('Empty variable list passed, but tolerate_empty_variables=False was set in PredictionTest.init'))
+
     def categorical_prediction(self,model,score='sklearn_roc_auc',cv_method=None,predictor_variables='univariate',keep_models=False,model_kwargs={},cv_kwargs={},score_kwargs={}):
         
         """
