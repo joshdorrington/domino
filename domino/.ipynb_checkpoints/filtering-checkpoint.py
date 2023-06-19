@@ -97,7 +97,7 @@ def ds_large_regions(mask_ds,n,dims,area_based=False):
         ds=mask_ds.copy()
         for var in list(ds.data_vars):
             
-            if (dims is not None) and (not np.all([d in mask_ds.dims for d in dims])):
+            if (dims is not None) and (not np.all([d in mask_ds[var].dims for d in dims])):
                 pass #ignore variables with missing dims
             else:
                 ds[var]=da_large_regions(ds[var],n,dims,area_based=area_based)
