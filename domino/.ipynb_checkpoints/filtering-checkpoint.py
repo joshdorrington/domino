@@ -96,7 +96,11 @@ def da_large_regions(da,n,dims,area_based=False):
 def ds_large_regions(mask_ds,n,dims,area_based=False):
         ds=mask_ds.copy()
         for var in list(ds.data_vars):
-            ds[var]=da_large_regions(ds[var],n,dims,area_based=area_based)
+            
+            if (dims is not None) and (not np.all([d in mask_ds.dims for d in dims])):
+                pass #ignore variables with missing dims
+            else:
+                ds[var]=da_large_regions(ds[var],n,dims,area_based=area_based)
         return ds
 
 def convolve_pad(x,N):
