@@ -73,7 +73,7 @@ def get_area_regions(grid,area_thresh,area):
     connected_da=xr.DataArray(connected,coords=area.coords)
     ix_areas=np.array([area.where(connected_da==i).sum().values\
               for i in ix])
-
+    print(ix_areas)
     for m in ix[ix_areas<area_thresh]:
         connected[connected==m]=0
     return connected>0

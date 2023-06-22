@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: domino-composite
-Version: 0.272
+Version: 0.273
 Summary: A package for compositing atmospheric datasets
 Home-page: https://github.com/joshdorrington/domino
 Author: Josh Dorrington
@@ -13,21 +13,24 @@ Description-Content-Type: text/markdown
 
 ## Documentation
 
-See https://github.com/joshdorrington/domino/blob/master/docbuild/domino-composite.pdf
+See our API reference here: https://github.com/joshdorrington/domino/blob/master/docbuild/domino-composite.pdf
 
 ## Examples
 
-A basic introduction to using the package out of the box, with three example applications:
+See our Jupyter notebook examples for more detailed discussion of how to apply Domino to different use cases.
 
-https://github.com/joshdorrington/domino/blob/master/examples/basic_usage.ipynb
+Our [basic](https://github.com/joshdorrington/domino/blob/master/examples/basic_compositing.ipynb) and [advanced](https://github.com/joshdorrington/domino/blob/master/examples/advanced_compositing.ipynb) compositing guides cover the use of Domino's flexible LaggedAnalyser class to easily compute time-lagged composites and apply bootstrap significance tests to them.
 
-A more in-depth discussion of how to customise the behaviour of the LaggedAnalyser class:
+Producing filtered precursor patterns from composites, and computing precursor activity indices from those is covered in our [IndexGenerator](https://github.com/joshdorrington/domino/blob/master/examples/precursor_index_computation.ipynb) guide.
 
-https://github.com/joshdorrington/domino/blob/master/examples/advanced_usage.ipynb
 
 ## Install
 
 domino can be installed using pip:
 ```
-python -m pip install "domino-composite==0.14"
+python -m pip install "domino-composite==0.272"
+```
+If you want to run the worked examples in the Jupyter notebooks you will need:
+```
+TO BE DECIDED
 ```
