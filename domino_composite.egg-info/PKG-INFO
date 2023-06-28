@@ -9,9 +9,11 @@ License: bsd-3-clause
 Description-Content-Type: text/markdown
 
 # Domino is a package for analysing composites of atmospheric data.
-## Based on xarray, Domino makes it easy to calculate lagged composites of fields and scalar indices around categorical event time series, and to compute bootstrapped confidence bounds. This is still an alpha release! While core functionality is stable, there could be some bugs!
+## Based on xarray, Domino makes it easy to calculate lagged composites of fields and scalar indices around categorical event time series, and to compute bootstrapped confidence bounds.
 
-![title](Imgs/domino_logo.png)
+## This is a beta release. While core functionality is stable, there may be some bugs: please contact me at joshua.dorrington@kit.edu if you encounter unexpected behaviour.
+
+<img src="Imgs/domino_logo.png" alt="logo" width="100"/>
 
 
 ## Documentation
@@ -26,7 +28,7 @@ See our Jupyter notebook examples for more detailed discussion of how to apply D
 
 Our [basic](https://github.com/joshdorrington/domino/blob/master/examples/basic_compositing.ipynb) and [advanced](https://github.com/joshdorrington/domino/blob/master/examples/advanced_compositing.ipynb) compositing guides cover the use of Domino's flexible LaggedAnalyser class to easily compute time-lagged composites and apply bootstrap significance tests to them.
 
-Producing filtered precursor patterns from composites, and computing precursor activity indices from those, is covered in our [Index_Computation guide](https://github.com/joshdorrington/domino/blob/master/examples/precursor_index_computation.ipynb), while an introduction to assessing the predictive power of indices is in the [Index_Predictability guide](https://github.com/joshdorrington/domino/blob/master/examples/Index_predictability.ipynb).
+Producing filtered precursor patterns from composites, and computing precursor activity indices from those, is covered in our [Index_Computation guide](https://github.com/joshdorrington/domino/blob/master/examples/precursor_index_computation.ipynb), while an introduction to assessing the predictive power of indices is in the [Index_Predictability guide](https://github.com/joshdorrington/domino/blob/master/examples/Index_Predictability.ipynb).
 
 
 ## Install
