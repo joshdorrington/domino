@@ -12,28 +12,34 @@ from domino.util import holm_bonferroni_correction, split_to_contiguous, is_time
 from domino.filtering import ds_large_regions, convolve_pad_ds
 from domino.deseasonaliser import Agg_Deseasonaliser
 
-
 class LaggedAnalyser(object):
     """Computes lagged composites of variables with respect to a categorical categorical event series, with support for bootstrap resampling to provide a non-parametric assessment of composite significance, and for deseasonalisation of variables.
     
-        **Arguments:**
+    **Arguments:**
         
-        *event*
-            An xarray.DataArray with one dimension taking on categorical values, each defining a class of event (or non-event).
+    *event*
             
-        **Optional arguments**
+    An xarray.DataArray with one dimension taking on categorical values, each defining a class of event (or non-event).
+            
+    **Optional arguments**
         
-        *variables, name, is_categorical*
+    *variables, name, is_categorical*
         
-            Arguments for adding variables to the LaggedAnalyser. Identical behaviour to calling add_variables directly.
-"""
+    Arguments for adding variables to the LaggedAnalyser. Identical behaviour to calling *LaggedAnalyser.add_variables* directly.
+    """
+    
     def __init__(self,event,variables=None,name=None,is_categorical=None):
+        """Initialise a new LaggedAnalyser object."""
         
-        #event is a dataarray
-        self.event=xr.DataArray(event)
+        #: event is a dataarray
+        self.event=xr.DataArray(event)#: This is a docstring?
+        """@private"""
+        
         #variables are stored in a dataset, and can be added later,
         #or passed as a DataArray, a Dataset or as a dict of DataArrays
         self.variables=xr.Dataset(coords=event.coords)
+        """@private"""
+
         if variables is not None:
             self.add_variable(variables,name,is_categorical,False)
             
@@ -41,12 +47,19 @@ class LaggedAnalyser(object):
         #equal to the lag applied. Designed to be accessed by the self.lagged_variables function
         self._lagged_variables={}
         self.lagged_means=None
+        """@private"""
+
         #variables that are a linear combination of other variables are more efficiently
         #computed after compositing using the self.add_derived_composite method
         self._derived_variables={}
-        self.deseasonalisers_={}
+        self._deseasonalisers={}
+        
         self.composite_mask=None
+        """@private"""
+
         self.boot_indices=None
+        """@private"""
+
         return
     
     def __repr__(self):
@@ -72,31 +85,36 @@ class LaggedAnalyser(object):
         **Arguments**
         
         *variables* 
-            An xarray.DataArray, xarray.Dataset or dictionary of xarray.DataArrays, containing data to be composited with respect to *event*. One of the coordinates of *variables* should have the same name as the coordinate of *events*. Stored internally as an xarray.Dataset. If a dictionary is passed, the DataArrays are joined according to the method *join_type* which defaults to 'outer'.
+        
+        An xarray.DataArray, xarray.Dataset or dictionary of xarray.DataArrays, containing data to be composited with respect to *event*. One of the coordinates of *variables* should have the same name as the coordinate of *events*. Stored internally as an xarray.Dataset. If a dictionary is passed, the DataArrays are joined according to the method *join_type* which defaults to 'outer'.
             
         **Optional Arguments**
         
         *name* 
-            A string. If *variables* is a single xarray.DataArray then *name* will be used as the name of the array in the LaggedAnalyser.variables DataArray. Otherwise ignored.
+        
+        A string. If *variables* is a single xarray.DataArray then *name* will be used as the name of the array in the LaggedAnalyser.variables DataArray. Otherwise ignored.
         
         *is_categorical* 
-            An integer, if *variables* is an xarray.DataArray, or else a dictionary of integers with keys corresponding to DataArrays in the xarray.Dataset/dictionary. 0 indicates that the variable is continuous, and 1 indicates that it is categorical. Note that continuous and categorical variables are by default composited differently (see LaggedAnalyser.compute_composites). Default assumption is all DataArrays are continuous, unless a DataAarray contains an 'is_categorical' key in its DataArray.attrs, in which case this value is used.
+        
+        An integer, if *variables* is an xarray.DataArray, or else a dictionary of integers with keys corresponding to DataArrays in the xarray.Dataset/dictionary. 0 indicates that the variable is continuous, and 1 indicates that it is categorical. Note that continuous and categorical variables are by default composited differently (see LaggedAnalyser.compute_composites). Default assumption is all DataArrays are continuous, unless a DataAarray contains an 'is_categorical' key in its DataArray.attrs, in which case this value is used.
             
         *overwrite*
-            A boolean. If False then attempts to assign a variable who's name is already in *LaggedAnalyser.variables* will raise a ValueError
+        
+        A boolean. If False then attempts to assign a variable who's name is already in *LaggedAnalyser.variables* will raise a ValueError
         
         *join_type*
-            A string setting the rules for how differences in the coordinate indices of different variables are handled:
-            “outer”: use the union of object indexes
-            “inner”: use the intersection of object indexes
+        
+        A string setting the rules for how differences in the coordinate indices of different variables are handled:
+        “outer”: use the union of object indexes
+        “inner”: use the intersection of object indexes
 
-            “left”: use indexes from the pre-existing *LaggedAnalyser.variables* with each dimension
+        “left”: use indexes from the pre-existing *LaggedAnalyser.variables* with each dimension
 
-            “right”: use indexes from the new *variables* with each dimension
+        “right”: use indexes from the new *variables* with each dimension
 
-            “exact”: instead of aligning, raise ValueError when indexes to be aligned are not equal
+        “exact”: instead of aligning, raise ValueError when indexes to be aligned are not equal
 
-            “override”: if indexes are of same size, rewrite indexes to be those of the pre-existing *LaggedAnalyser.variables*. Indexes for the same dimension must have the same size in all objects.
+        “override”: if indexes are of same size, rewrite indexes to be those of the pre-existing *LaggedAnalyser.variables*. Indexes for the same dimension must have the same size in all objects.
         """
         if isinstance(variables,dict):
             
@@ -154,11 +172,9 @@ class LaggedAnalyser(object):
         #We are really paranoid about mixing up our lags. So we implement this safety check
         self._check_offset_is_valid(offset,mode)
         
-        #The meat of the function:  BREAKING CHANGE WITH RESPECT TO PREVIOUS VERSION
-        time_offset=durel.relativedelta(**{offset_unit:offset})
-        new_dim=pd.to_datetime(self.variables[offset_dim]).map(lambda t: t- time_offset) #THIS USED TO BE +time_offset
-        self._lagged_variables[offset]=self.variables.copy(deep=False)
-        self._lagged_variables[offset][offset_dim]=new_dim
+        #REPLACED PREVIOUS IMPLEMENTATION WITH EQUIVALENT UTIL IMPORT.
+        self._lagged_variables[offset]=offset_time_dim(self.variables,-offset,offset_unit=offset_unit,offset_dim=offset_dim)
+
         return
     
     #For coords not in a time format
@@ -171,21 +187,26 @@ class LaggedAnalyser(object):
         **Arguments**
         
         *offsets*
-            An iterable of integers which represent time lags at which to lag *LaggedAnalyser.variables* in the units specified by *offset_unit*. Positive offsets denote variables *preceding* the event.
+        
+        An iterable of integers which represent time lags at which to lag *LaggedAnalyser.variables* in the units specified by *offset_unit*. Positive offsets denote variables *preceding* the event.
             
         **Optional arguments**
         
         *offset_unit*
-            A string, defining the units of *offsets*. Valid options are weeks, days, hours, minutes, seconds, milliseconds, and microseconds.
+        
+        A string, defining the units of *offsets*. Valid options are weeks, days, hours, minutes, seconds, milliseconds, and microseconds.
             
         *offset_dim*
-            A string, defining the coordinate of *LaggedAnalyser.variables* along which offsets are to be calculated.
+        
+        A string, defining the coordinate of *LaggedAnalyser.variables* along which offsets are to be calculated.
             
         *mode*
-            One of 'any', 'past', or 'future'. If 'past' or 'future' is used then only positive or negative lags are valid, respectively.
+        
+        One of 'any', 'past', or 'future'. If 'past' or 'future' is used then only positive or negative lags are valid, respectively.
             
         *overwrite*
-            A boolean. If False, then attempts to produce a lag which already exist will raise a ValueError.
+        
+        A boolean. If False, then attempts to produce a lag which already exist will raise a ValueError.
         
         """
         time_type=int(is_time_type(self.variables[offset_dim][0].values))
@@ -278,25 +299,32 @@ class LaggedAnalyser(object):
         **Optional arguments**
         
         *dim*
-            A string, the coordinate along which to compute composites.
+        
+        A string, the coordinate along which to compute composites.
             
         *lag_vals*
-            Either 'All', or a list of integers, denoting the time lags for which composites should be computed.
+        
+        Either 'All', or a list of integers, denoting the time lags for which composites should be computed.
             
         *as_anomaly*
-            A Boolean, defining whether composites should be given as absolute values or differences from the unpartitioned value.
+        
+        A Boolean, defining whether composites should be given as absolute values or differences from the unpartitioned value.
             
         *con_func*
-            The summary metric to use for continuous variables. Defaults to a standard mean average. If None, then continuous variables will be ignored
+        
+        The summary metric to use for continuous variables. Defaults to a standard mean average. If None, then continuous variables will be ignored
             
         *cat_func*
-            The summary metric to use for categorical variables. Defaults to the occurrence probability of each categorical value. If None, then categorical variables will be ignored
+        
+        The summary metric to use for categorical variables. Defaults to the occurrence probability of each categorical value. If None, then categorical variables will be ignored
             
         *inplace*
-            A boolean, defining whether the composite should be stored in *LaggedAnalyser.composites*
+    
+        A boolean, defining whether the composite should be stored in *LaggedAnalyser.composites*
         
         **returns**
-            An xarray.Dataset like  *LaggedAnalyser.variables* but summarised according to *con_func* and *cat_func*, and with an additional coordinate *index_val*, which indexes over the values taken by *LaggedAnalyser.event*.
+        
+        An xarray.Dataset like  *LaggedAnalyser.variables* but summarised according to *con_func* and *cat_func*, and with an additional coordinate *index_val*, which indexes over the values taken by *LaggedAnalyser.event*.
             
         """
         composite=self._compute_aggregate_over_lags(self.event,dim,lag_vals,con_func,cat_func)
@@ -323,20 +351,24 @@ class LaggedAnalyser(object):
         **Optional arguments**
         
         *dim*
-            A string, the name of the shared coordinate between *LaggedAnalyser.variables* and *LaggedAnalyser.event*.
+        
+        A string, the name of the shared coordinate between *LaggedAnalyser.variables* and *LaggedAnalyser.event*.
         
         *lag_vals*
-            'all' or a iterable of integers, specifying for which lag values to compute the summary metric.
+        
+        'all' or a iterable of integers, specifying for which lag values to compute the summary metric.
         
         *con_func*
-            The summary metric to use for continuous variables. Defaults to a standard mean average. If None, then continuous variables will be ignored
+        
+        The summary metric to use for continuous variables. Defaults to a standard mean average. If None, then continuous variables will be ignored
             
         *cat_func*
-            The summary metric to use for categorical variables. Defaults to the occurrence probability of each categorical value. If None, then continuous variables will be ignored
+        
+        The summary metric to use for categorical variables. Defaults to the occurrence probability of each categorical value. If None, then continuous variables will be ignored
 
         **returns**
         
-            An xarray.Dataset like  *LaggedAnalyser.variables* but summarised according to *con_func* and *cat_func*.
+        An xarray.Dataset like  *LaggedAnalyser.variables* but summarised according to *con_func* and *cat_func*.
 
 """
         fake_event=self.event.copy(data=np.zeros_like(self.event))
@@ -348,18 +380,22 @@ class LaggedAnalyser(object):
         **Arguments**
         
         *name*
-            A string, providing the name of the new variable to add.
+        
+        A string, providing the name of the new variable to add.
             
         *func*
-            A callable which must take 1 or more xarray.DataArrays as inputs
+        
+         A callable which must take 1 or more xarray.DataArrays as inputs
             
         *composite_vars*
-            An iterable of strings, of the same length as the number of arguments taken by *func*. Each string must be the name of a variable in *LaggedAnalyser.variables* which will be passed into *func* in order.
+        
+        An iterable of strings, of the same length as the number of arguments taken by *func*. Each string must be the name of a variable in *LaggedAnalyser.variables* which will be passed into *func* in order.
         
         **Optional arguments**
         
         *as_anomaly*
-            A boolean. Whether anomaly composites or full composites should be passed in to func.
+        
+        A boolean. Whether anomaly composites or full composites should be passed in to func.
         """
         
         if np.ndim(as_anomaly)==1:
@@ -383,36 +419,50 @@ class LaggedAnalyser(object):
         **Arguments**
         
         *bootnum*
-            An integer, the number of bootstrapped composites to compute
+        
+        An integer, the number of bootstrapped composites to compute
             
         **Optional arguments**
         
         *dim*
-            A string, the name of the shared coordinate between *LaggedAnalyser.variables* and *LaggedAnalyser.event*.
+        
+        A string, the name of the shared coordinate between *LaggedAnalyser.variables* and *LaggedAnalyser.event*.
             
         *con_func*
-            The summary metric to use for continuous variables. Defaults to a standard mean average. If None, then continuous variables will be ignored
+        
+        The summary metric to use for continuous variables. Defaults to a standard mean average. If None, then continuous variables will be ignored
             
         *cat_func*
-            The summary metric to use for categorical variables. Defaults to the occurrence probability of each categorical value. If None, then continuous variables will be ignored
+        
+        The summary metric to use for categorical variables. Defaults to the occurrence probability of each categorical value. If None, then continuous variables will be ignored
 
         *lag*
-            An integer, specifying which lagged variables to use for the bootstraps. i.e. bootstraps for lag=90 will be from a completely different season than those for lag=0.
+        
+        An integer, specifying which lagged variables to use for the bootstraps. i.e. bootstraps for lag=90 will be from a completely different season than those for lag=0.
             
         *synth_mode*
-            A string, specifying how synthetic event indices are to be computed. Valid options are:
+        
+        A string, specifying how synthetic event indices are to be computed. Valid options are:
             
-            "random": categorical values are randomly chosen with the same probability of occurrence as those found in *LaggedAnalyser.event*, but with no autocorrelation.
-            
-            "markov": A first order Markov chain is fitted to *LaggedAnalyser.event*, producing some autocorrelation and state dependence in the synthetic series. Generally a better approximation than "random" and so should normally be used.
-            
-            "shuffle": The values are randomly reordered. This means that each value will occur exactly the same amount of times as in the original index, and so is ideal for particularly rare events or short series.
+        "random": 
+        
+        categorical values are randomly chosen with the same probability of occurrence as those found in *LaggedAnalyser.event*, but with no autocorrelation.
+
+        "markov": 
+        
+        A first order Markov chain is fitted to *LaggedAnalyser.event*, producing some autocorrelation and state dependence in the synthetic series. Generally a better approximation than "random" and so should normally be used.
+
+        "shuffle": 
+        
+        The values are randomly reordered. This means that each value will occur exactly the same amount of times as in the original index, and so is ideal for particularly rare events or short series.
             
         *data_vars*
-            An iterable of strings, specifying for which variables bootstraps should be computed.
+        
+        An iterable of strings, specifying for which variables bootstraps should be computed.
                 
         **returns**
-            An xarray.Dataset like *LaggedAnalyser.variables* but summarised according to *con_func* and *cat_func*, and with a new coordinate 'bootnum' of length *bootnum*.
+        
+        An xarray.Dataset like *LaggedAnalyser.variables* but summarised according to *con_func* and *cat_func*, and with a new coordinate 'bootnum' of length *bootnum*.
 
         """
         if data_vars==None:
@@ -495,24 +545,30 @@ class LaggedAnalyser(object):
         
         **Arguments**
         
-            *bootstraps*
-                An xarray.Dataset with a coordinate 'bootnum', such as produced by *LaggedAnalyser.compute_bootstraps*
-                
-            *comp*
-                An xarray Dataset of the same shape as *bootstraps* but without a 'bootnum' coordinate. Missing or additional variables are allowed, and are simply ignored.
-            *p*
-                A float, specifying the p-value of the 2-sided significance test (values in the range 0 to 1). 
+        *bootstraps*
+
+        An xarray.Dataset with a coordinate 'bootnum', such as produced by *LaggedAnalyser.compute_bootstraps*
+
+        *comp*
+
+        An xarray Dataset of the same shape as *bootstraps* but without a 'bootnum' coordinate. Missing or additional variables are allowed, and are simply ignored.
+        *p*
+
+        A float, specifying the p-value of the 2-sided significance test (values in the range 0 to 1). 
             
         **Optional arguments**
 
         *data_vars*
-            An iterable of strings, specifying for which variables significance should be computed.
+            
+        An iterable of strings, specifying for which variables significance should be computed.
             
         *hb_correction*
-            A Boolean, specifying whether a Holm-Bonferroni correction should be applied to *p*, in order to reduce the family-wide error rate. Note that this correction is currently only applied to each variable in *comp* independently, and so will have no impact on scalar variables.
+        
+        A Boolean, specifying whether a Holm-Bonferroni correction should be applied to *p*, in order to reduce the family-wide error rate. Note that this correction is currently only applied to each variable in *comp* independently, and so will have no impact on scalar variables.
         
         **returns**
-            An xarray.Dataset like *comp* but with boolean data, specifying whether each feature of each variable passed the significance test.
+        
+        An xarray.Dataset like *comp* but with boolean data, specifying whether each feature of each variable passed the significance test.
         """
         if data_vars==None:
             data_vars=list(bootstraps.data_vars)
@@ -537,35 +593,40 @@ class LaggedAnalyser(object):
         
         """A wrapper around *compute_bootstraps* and *get_significance*, that calculates bootstraps and applies a significance test to a number of time lagged composites simulataneously.
         
-        **Arguments**
-        
-        *bootnum*
-            An integer, the number of bootstrapped composites to compute
-            
-        *p*
-            A float, specifying the p-value of the 2-sided significance test (values in the range 0 to 1). 
+    **Arguments**
 
-        **Optional arguments**
-    
-        *dim*
-            A string, the name of the shared coordinate between *LaggedAnalyser.variables* and *LaggedAnalyser.event*.
-            
-        *synth_mode*
-            A string, specifying how synthetic event indices are to be computed. Valid options are:
-            "random": categorical values are randomly chosen with the same probability of occurrence as those found in *LaggedAnalyser.event*, but with no autocorrelation.
-            'markov': A first order Markov chain is fitted to *LaggedAnalyser.event*, producing some autocorrelation and state dependence in the synthetic series. Generally a better approximation than "random" and so should normally be used.
+    *bootnum*
 
-        *reuse_lag0_boots*
-            A Boolean. If True, bootstraps are only computed for lag=0, and then used as a null distribution to assess all lagged composites. For variables which are approximately stationary across the lag timescale, then this is a good approximation and can increase performance. However if used incorrectly, it may lead to 'significant composites' which simply reflect the seasonal cycle. if False, separate bootstraps are computed for all time lags.
-            
-        *data_vars*
-            An iterable of strings, specifying for which variables significance should be computed.
+    An integer, the number of bootstrapped composites to compute
+
+    *p*
+
+    A float, specifying the p-value of the 2-sided significance test (values in the range 0 to 1). 
+
+    **Optional arguments**
+
+    *dim*
+
+    A string, the name of the shared coordinate between *LaggedAnalyser.variables* and *LaggedAnalyser.event*.
+
+    *synth_mode*
+
+    A string, specifying how synthetic event indices are to be computed. Valid options are:
+    "random": categorical values are randomly chosen with the same probability of occurrence as those found in *LaggedAnalyser.event*, but with no autocorrelation.
+    'markov': A first order Markov chain is fitted to *LaggedAnalyser.event*, producing some autocorrelation and state dependence in the synthetic series. Generally a better approximation than "random" and so should normally be used.
+
+    *reuse_lag0_boots*
+        A Boolean. If True, bootstraps are only computed for lag=0, and then used as a null distribution to assess all lagged composites. For variables which are approximately stationary across the lag timescale, then this is a good approximation and can increase performance. However if used incorrectly, it may lead to 'significant composites' which simply reflect the seasonal cycle. if False, separate bootstraps are computed for all time lags.
+
+    *data_vars*
+        An iterable of strings, specifying for which variables significance should be computed.
+
+    *hb_correction*
+        A Boolean, specifying whether a Holm-Bonferroni correction should be applied to *p*, in order to reduce the family-wide error rate. Note that this correction is currently only applied to each variable in *comp* independently, and so will have no impact on scalar variables.
         
-        *hb_correction*
-            A Boolean, specifying whether a Holm-Bonferroni correction should be applied to *p*, in order to reduce the family-wide error rate. Note that this correction is currently only applied to each variable in *comp* independently, and so will have no impact on scalar variables.
-        
-        **returns**
-            An xarray.Dataset like *LaggedAnalyser.variables* but with the *dim* dimension summarised according to *con_func* and *cat_func*, an additional *lag* coordinate, and with boolean data specifying whether each feature of each variable passed the significance test.
+    **returns**
+
+    An xarray.Dataset like *LaggedAnalyser.variables* but with the *dim* dimension summarised according to *con_func* and *cat_func*, an additional *lag* coordinate, and with boolean data specifying whether each feature of each variable passed the significance test.
 
         """
         lag_vals=list(self._lagged_variables)
@@ -591,19 +652,24 @@ class LaggedAnalyser(object):
                 **Optional arguments**
 
                 *variable_list*
-                    A list of variables to deseasonalise. Defaults to all variables in the *LaggedAnalyser.variables*
+                
+                A list of variables to deseasonalise. Defaults to all variables in the *LaggedAnalyser.variables*
 
                 *dim*
-                    A string, the name of the shared coordinate between *LaggedAnalyser.variables* and *LaggedAnalyser.event*, along which the seasonal cycle is computed. Currently, only timelike coordinates are supported.
+                
+                A string, the name of the shared coordinate between *LaggedAnalyser.variables* and *LaggedAnalyser.event*, along which the seasonal cycle is computed. Currently, only timelike coordinates are supported.
                 
                 *agg*
-                    A string specifying the datetime-like field to aggregate over. Useful and supported values are 'season', 'month', 'weekofyear', and 'dayofyear'
+                
+                A string specifying the datetime-like field to aggregate over. Useful and supported values are 'season', 'month', 'weekofyear', and 'dayofyear'
                     
                 *smooth*
-                    An integer, specifying the size of the n-timestep centred rolling mean applied to the aggregated seasonal cycle. By default *smooth*=1 results in no smoothing.
+                
+                An integer, specifying the size of the n-timestep centred rolling mean applied to the aggregated seasonal cycle. By default *smooth*=1 results in no smoothing.
 
                 *coeffs*
-                    A Dataset containing a precomputed seasonal cycle, which, if *LaggedAnalyser.variables* has coordinates (*dim*,[X,Y,...,Z]), has coords (*agg*,[X,Y,...,Z]), and has the same data variables as *LaggedAnalyser.variables*. If *coeffs* is provided, no seasonal cycle is fitted to *LaggedAnalyser.variables*, *coeffs* is used instead.
+                
+                A Dataset containing a precomputed seasonal cycle, which, if *LaggedAnalyser.variables* has coordinates (*dim*,[X,Y,...,Z]), has coords (*agg*,[X,Y,...,Z]), and has the same data variables as *LaggedAnalyser.variables*. If *coeffs* is provided, no seasonal cycle is fitted to *LaggedAnalyser.variables*, *coeffs* is used instead.
 
         """        
 
@@ -620,7 +686,7 @@ class LaggedAnalyser(object):
             cycle=dsnlsr.evaluate_cycle(data=da[dim],smooth=smooth)
             self.variables[var]=da.copy(data=da.data-cycle.data)
             dsnlsr.data=None #Prevents excess memory storage
-            self.deseasonalisers_[var]=dsnlsr
+            self._deseasonalisers[var]=dsnlsr
         return   
     
     def get_seasonal_cycle_coeffs(self):
@@ -629,7 +695,7 @@ class LaggedAnalyser(object):
         **Returns**
         An xarray.Dataset, as specified in  the *LaggedAnalyser.deseasonalise_variables* *coeff* optional keyword.
         """
-        coeffs=xr.Dataset({v:dsnlsr.cycle_coeffs for v,dsnlsr in self.deseasonalisers_.items()})
+        coeffs=xr.Dataset({v:dsnlsr.cycle_coeffs for v,dsnlsr in self._deseasonalisers.items()})
         return coeffs
 
     #If deseasonalise_variables has been called, then this func can be used to compute the
@@ -640,47 +706,58 @@ class LaggedAnalyser(object):
         If *LaggedAnalyser.deseasonalise_variables* has been called, then this function returns the seasonal mean state corresponding to a given composite, given by a sum of the seasonal cycle weighted by the time-varying occurrence of each categorical value in *LaggedAnalyser.events*. This mean state + the deseasonalised anomaly composite
     produced by *LaggedAnalyser.compute_composites* then retrieves the full composite pattern.
     
-        **Returns**
-            An xarray.Dataset containing the composite seasonal mean values.
+    **Returns**
+        An xarray.Dataset containing the composite seasonal mean values.
         """
-        variable_list=list(self.deseasonalisers_)
+        variable_list=list(self._deseasonalisers)
         ts={e:self.event[self.event==e].time for e in np.unique(self.event)}
         lags=np.unique([0,*list(self._lagged_variables)])
         
         mean_states={}
         for var in variable_list:
-            dsnlsr=self.deseasonalisers_[var]
+            dsnlsr=self._deseasonalisers[var]
             agg=dsnlsr.agg
             mean_states[var]=xr.concat([\
-                             xr.concat([\
-                                    self.deseasonalisers_[var].cycle_coeffs.sel(\
-                                    {agg:getattr(pd.to_datetime(t).map(\
-                                        lambda ti: ti+durel.relativedelta(**{self.offset_unit:int(l)})),agg)}\
-                                    ).mean(agg).assign_coords({'lag':l,'index_val':i})\
-                            for l in lags],'lag')\
+                                 xr.concat([\
+                                    self._lag_average_cycle(dsnlsr,agg,l,t,i)\
+                                for l in lags],'lag')\
                             for i,t in ts.items()],'index_val')
             
         return xr.Dataset(mean_states)
         
-
+    def _lag_average_cycle(self,dsnlsr,agg,l,t,i):
+        
+        dt=durel.relativedelta(**{self.offset_unit:int(l)})
+        tvals=pd.to_datetime([pd.to_datetime(tt)+dt for tt in t.values])
+        cycle_eval=dsnlsr.cycle_coeffs.sel({agg:getattr(tvals,agg)})
+        cycle_mean=cycle_eval.mean(agg).assign_coords({'lag':l,'index_val':i})
+        return cycle_mean
+    
 class PatternFilter(object):
     """Provides filtering methods to refine n-dimensional boolean masks, and apply them to an underlying dataset.
     
         **Optional arguments:**
+        
         *mask_ds*
-            An xarray boolean Dataset of arbitrary dimensions which provides the initial mask dataset. If *mask_ds*=None  and *analyser*=None, then *mask_ds* will be initialised as a Dataset of the same dimensions and data_vars as *val_ds*, with all values = 1 (i.e. initially unmasked). 
+        
+        An xarray boolean Dataset of arbitrary dimensions which provides the initial mask dataset. If *mask_ds*=None  and *analyser*=None, then *mask_ds* will be initialised as a Dataset of the same dimensions and data_vars as *val_ds*, with all values = 1 (i.e. initially unmasked). 
         
         *val_ds*
-            An xarray Dataset with the same dimensions as *mask_ds* if provided, otherwise arbitrary, consisting of an underlying dataset to which the mask is applied. If *val_ds*=None and *analyser*=None, then *PatternFilter.apply_value_mask* will raise an Error
+        
+        An xarray Dataset with the same dimensions as *mask_ds* if provided, otherwise arbitrary, consisting of an underlying dataset to which the mask is applied. If *val_ds*=None and *analyser*=None, then *PatternFilter.apply_value_mask* will raise an Error
             
         *analyser*
-            An instance of a domino.core.LaggedAnalyser class for which both composites and significance masks have been computed, used to infer the *val_ds* and *mask_ds* arguments respectively. This overrides any values passed explicitly to  *mask_ds* and *val_ds*.
+        
+        An instance of a  core.LaggedAnalyser class for which both composites and significance masks have been computed, used to infer the *val_ds* and *mask_ds* arguments respectively. This overrides any values passed explicitly to  *mask_ds* and *val_ds*.
             
     """
     def __init__(self,mask_ds=None,val_ds=None,analyser=None):
-        
+        """Initialise a new PatternFilter object"""
         self.mask_ds=mask_ds
+        """@private"""
         self.val_ds=val_ds
+        """@private"""
+
         if analyser is not None:
             self._parse_analyser(analyser)
             
@@ -710,13 +787,16 @@ class PatternFilter(object):
     
     def update_mask(self,new_mask,mode):
         """ Update *PatternFilter.mask_ds* with a new mask, either taking their union or intersection, or replacing the current mask with new_mask.
+        
         **Arguments**
         
-            *new_mask*
-            An xarray.Dataset with the same coords and variables as *PatternFilter.mask_ds*.
-            
-            *mode*
-            A string, one of 'replace','intersection' or 'union', defining how *new_mask* should be used to update the mask.
+        *new_mask*
+
+        An xarray.Dataset with the same coords and variables as *PatternFilter.mask_ds*.
+
+        *mode*
+
+        A string, one of 'replace','intersection' or 'union', defining how *new_mask* should be used to update the mask.
         """
         new_mask=new_mask.astype(int)
         if mode=='replace':
@@ -731,25 +811,30 @@ class PatternFilter(object):
                   
     def apply_value_mask(self,truth_function,*args,mode='intersection'):
         """ Apply a filter to *PatternFilter.mask_ds* based on a user-specified truth function which is applied to *PatternFilter.val_ds. 
-                **Examples**
-                    #Mask values beneath a threshold:
-                    def larger_than_thresh(ds,thresh):
-                        return ds>thresh
-                    patternfilter.apply_value_mask(is_positive,thresh)
+        
+        **Examples**
+        
+            #Mask values beneath a threshold:
+            def larger_than_thresh(ds,thresh):
+                return ds>thresh
+            patternfilter.apply_value_mask(is_positive,thresh)
 
-                    #Mask values where absolute value is less than a reference field:
-                    def amp_greater_than_reference(ds,ref_ds):
-                        return np.abs(ds)>ref_ds
-                    pattern_filter.apply_value_mask(amp_greater_than_reference,ref_ds)
+            #Mask values where absolute value is less than a reference field:
+            def amp_greater_than_reference(ds,ref_ds):
+                return np.abs(ds)>ref_ds
+            pattern_filter.apply_value_mask(amp_greater_than_reference,ref_ds)
 
-                **Arguments**
+        **Arguments**
 
-                    *truth_function*
-                    A function with inputs (val_ds,*args) that returns a boolean dataset with the same coords and data variables as *PatternFilter.val_ds*.
+        *truth_function*
+        
+        A function with inputs (val_ds,*args) that returns a boolean dataset with the same coords and data variables as *PatternFilter.val_ds*.
 
-                **Optional arguments**
-                    *mode*
-                    A string, one of 'replace','intersection' or 'union', defining how the value filter should be used to update the *PatternFilter.mask_ds*.
+        **Optional arguments**
+        
+        *mode*
+            
+        A string, one of 'replace','intersection' or 'union', defining how the value filter should be used to update the *PatternFilter.mask_ds*.
         """        
         if self.val_ds is None:
             raise(ValueError('val_ds must be provided to apply value mask.'))
@@ -763,6 +848,7 @@ class PatternFilter(object):
         When *area_type*='gridpoint', *n* specifies the number of connected datapoints within each connected region. For the special case where *dims* consists of a latitude- and longitude-like coordinate, area_type='spherical' applies a cosine-latitude weighting, such that *n* can be interpreted as a measure of area, where a datapoint with lat=0 would have area 1. 
         
         **Examples**
+        
             #Keep groups of True values consisting of an area >=30 square equatorial gridpoints
             patternfilter.apply_area_mask(30,dims=('lat','lon'),area_type='spherical')
             
@@ -775,18 +861,23 @@ class PatternFilter(object):
 
         **Arguments**
 
-            *n*
-            A scalar indicating the minimum size of an unmasked group, in terms of number of gridpoints (for *area_type*=gridpoint) or the weighted area (for *area_type*=spherical), beneath which the group will be masked.
+        *n*
+            
+        A scalar indicating the minimum size of an unmasked group, in terms of number of gridpoints (for *area_type*=gridpoint) or the weighted area (for *area_type*=spherical), beneath which the group will be masked.
 
         **Optional arguments**
-            *dims*
-            An iterable of strings specifying coords in *PatternFilter.mask_ds* which define the subspace in which groups of connected True values are identified. Other dims will be iterated over. DataArrays within *PatternFilter.mask_ds* that do not contain all the *dims* will be ignored. If *dims*=None, all dims in each DataArray will be used.
+        
+        *dims*
             
-            *mode*
-            A string, one of 'replace','intersection' or 'union', defining how the area filter should be used to update the *PatternFilter.mask_ds*.
+        An iterable of strings specifying coords in *PatternFilter.mask_ds* which define the subspace in which groups of connected True values are identified. Other dims will be iterated over. DataArrays within *PatternFilter.mask_ds* that do not contain all the *dims* will be ignored. If *dims*=None, all dims in each DataArray will be used.
             
-            *area_type*
-            A string, one of 'gridpoint' or 'spherical' as specified above. 'spherical' is currently only supported for len-2 *dims* kwargs, with the first assumed to be latitude-like. 
+        *mode*
+
+        A string, one of 'replace','intersection' or 'union', defining how the area filter should be used to update the *PatternFilter.mask_ds*.
+            
+        *area_type*
+
+        A string, one of 'gridpoint' or 'spherical' as specified above. 'spherical' is currently only supported for len-2 *dims* kwargs, with the first assumed to be latitude-like. 
             
         """        
         if area_type=='gridpoint':
@@ -804,14 +895,18 @@ class PatternFilter(object):
         """ Apply a square n-point convolution filter to *PatternFilter.mask_ds* in one or two dimensions specified by *dims*, iterated over remaining dimensions. This has the effect of extending the unmasked regions and smoothing the mask overall.
         
         **Arguments**
-            *n*
-            A positive integer specifying the size of the convolution filter. *n*=1 leaves the mask unchanged. Even *n* are asymmetric and shifted right. 
+        
+        *n*
             
-            *dims*
-            A length 1 or 2 iterable of strings specifying the dims in which the convolution is applied. Other dims will be iterated over. DataArrays within *PatternFilter.mask_ds* that do not contain all the *dims* will be ignored. 
-            
-            *mode*
-            A string, one of 'replace','intersection' or 'union', defining how the area filter should be used to update the *PatternFilter.mask_ds*.
+        A positive integer specifying the size of the convolution filter. *n*=1 leaves the mask unchanged. Even *n* are asymmetric and shifted right. 
+
+        *dims*
+
+        A length 1 or 2 iterable of strings specifying the dims in which the convolution is applied. Other dims will be iterated over. DataArrays within *PatternFilter.mask_ds* that do not contain all the *dims* will be ignored. 
+
+        *mode*
+
+        A string, one of 'replace','intersection' or 'union', defining how the area filter should be used to update the *PatternFilter.mask_ds*.
         """
         
         if not len(dims) in [1,2]:
@@ -833,14 +928,19 @@ class PatternFilter(object):
         **Optional arguments**
         
         *ds*
+        
         An xarray.Dataset to apply the mask to. Should have the same coords and data_vars as *PatternFilter.mask_ds*. If None, the mask is applied to *PatternFilter.val_ds*.
         
         *drop_empty*
+        
         A boolean value. If True, then completely masked variables are dropped from the returned masked Dataset.
+        
         *fill_val*
+        
         A scalar that defaults to np.nan. The value with which masked gridpoints in the Dataset are replaced.
         
         **Returns**
+        
         A Dataset with masked values replaced by *fill_val*.
         """
         if ds is None:
@@ -875,23 +975,30 @@ class IndexGenerator(object):
         
     def __str__(self):
             return self.__repr__
-        
+    
+    
     def centre(self,x,dim='time',ref=None):
+        """@private"""
+
         if ref is None:
             ref=x.mean(dim=dim)
         return x-ref
     
     def normalise(self,x,dim='time',ref=None):
+        """@private"""
+
         if ref is None:
             ref=x.std(dim=dim)
         return x/ref
     
     def standardise(self,x,dim='time',mean_ref=None,std_ref=None):
+        """@private"""
         centred_x=self.centre(x,dim,mean_ref)
         standardised_x=self.normalise(centred_x,dim,std_ref)
         return standardised_x
         
     def collapse_index(self,ix,dims):
+        """@private"""
         lat_coords=['lat','latitude','grid_latitude']
         if not np.any(np.isin(lat_coords,dims)):
             return ix.sum(dims)
@@ -911,31 +1018,39 @@ class IndexGenerator(object):
         
         An xarray.Dataset of patterns to project onto with arbitrary dimensions.
         
-        series_ds*
+        *series_ds*
         
         An xarray.Dataset of variables to project onto the patterns. Coordinates of *series_ds* once subsetted using *slices* must match the dimensions of *pattern_ds* + the extra coord *dim*.
+        
         **Optional arguments**
         
         *dim*:
+        
         A string specifying the remaining coord of the scalar indices. Defaults to 'time', which should be the choice for most use cases.
         
         *slices*
+        
         A dictionary or iterable of dictionaries, each specifying a subset of *pattern_ds* to take before computing an index, with one index returned for each dictionary and for each variable. Subsetting is based on the *xr.Dataset.sel* method: e.g. *slices*=[dict(lag=0,index_val=1)] will produce 1 set of indices based on pattern_ds.sel(lag=0,index_val=1). If *slices*=None, no subsets are computed.
         
         *ix_means*
+        
         If None, the mean of each index is calculated and subtracted, resulting in centred indices. Otherwise, *ix_means* should be a dictionary of index names and predefined mean values which are subtracted instead. Of most use for online computations, updating a precomputed index in a new dataset.
         
         *ix_stds*
+        
         If None, the standard deviation of each index is calculated and is divided by, resulting in standardised indices. Otherwise, *ix_stds* should be a dictionary of index names and predefined std values which are divided by instead. Of most use for online computations, updating a precomputed index in a new dataset.
 
         *drop_blank*
+        
         A boolean. If True, drop indices where the corresponding pattern is entirely blank. If False, returns an all np.nan time series.
         *in_place*
         
         *strict_metadata*
+        
         If False, indices will be merged into a common dataset regardless of metadata. If True, nonmatching metadata will raise a ValueError.
         
         **Returns
+        
         An xarray.Dataset of indices with a single coordinate (*dim*).
         """
         #Parse inputs
@@ -1012,8 +1127,8 @@ class IndexGenerator(object):
     def _add_index_attrs(self,index,sl,mean,std):
         for v in index:
             ix=index[v]
-            ix.attrs['mean']=mean[v]
-            ix.attrs['std']=std[v]
+            ix.attrs['mean']=np.array(mean[v])
+            ix.attrs['std']=np.array(std[v])
             for k,i in sl.items():
                 ix.attrs[k]=i
             index[v]=ix

@@ -5,15 +5,18 @@ import sklearn.cross_decomposition as skcc
 class PLSR_Reduction(object):
     """
     Wraps around the scikit-learn partial-least-squares-regression algorithm, supporting prediction-focused dimensionality reduction.
+    
     **Arguments**
     
     *mode_num*
+    
     An integer number of PLSR modes to retain. Defaults to the second dimension of the predictor variables *X* passed to *PLSR_Reduction.fit*
     
     """    
     def __init__(self,mode_num):
-        
+        """Initialise a PLSR_Reduction object"""
         self.mode_num=mode_num
+        """@private"""
         return
     
     def __repr__(self):
@@ -45,19 +48,23 @@ class PLSR_Reduction(object):
         **Arguments**
     
         *X*
+        
         The predictor variables to transform. An xarray.Datarray with two coordinates representing the sample and feature dimensions as specified by *sample_dim*.
         
         *y*
+        
         The target variables to be predicted. An xarray.Datarray with two coordinates representing the sample and feature dimensions as specified by *sample_dim*.
         
         **Optional arguments**
         
         *sample_dim*
+        
         A string specifying the sample dimension which must be shared between *X* and *y*. Defaults to *time*.
         
         **Returns**
         
         *plsr_X*
+        
         A DataArray containing PLSR modes, with a sample coordinate given by the intersection of the sample coordinates of *X* and *y*
 
         """
@@ -96,11 +103,13 @@ class PLSR_Reduction(object):
         
         
         *X*
+        
         The predictor variables to transform. An xarray.Datarray with two coordinates representing the sample and feature dimensions as specified by the *sample_dim* used to fit the PLSR regression.
         
         **Returns**
         
         *proj_plsr_X*
+        
         A DataArray containing projected PLSR modes, with the same sample coordinate as *X*.
         
         """       
@@ -123,11 +132,13 @@ class PLSR_Reduction(object):
         
         
         *X*
+        
         The pattern to transform. An xarray.Datarray of arbitrary shape, and with an identical feature coordinate to the predictor variables passed into *PLSR_Reduction.fit*.
         
         **Returns**
         
         *pattern*
+        
         A DataArray containing the resulting weighted sums, with the same coordinates as *X*, except for the feature coordinate is replaced with the PLSR_mode coordinate.
         """
         assert self.feature_dim in X.dims

@@ -5,10 +5,12 @@ from sklearn.metrics import roc_auc_score
 
 
 def CV_None(predictors,target,**cv_kwargs):
+    """No cross validation: train and test data are the same."""
     return [[predictors,target,predictors,target]]
 
 def CV_drop1year(predictors,target,**cv_kwargs):
-    
+    """Cross validation is performed by dropping out single years of data from the training set to use as test data. This is repeated for all years with non-nan data."""
+
     X,y=xr.align(predictors.dropna('time',how='all'),target.dropna('time',how='all'))
     years=np.unique(X['time.year'])
     iters=[]
@@ -22,7 +24,7 @@ def CV_drop1year(predictors,target,**cv_kwargs):
     return iters
 
 def CV_n_chunks(predictors,target,N=2):
-    
+    """The dataset is split into *N* chunks and each is successively held out as test data."""
     X,y=xr.align(predictors,target)
     L=len(y)
     l=L//N
@@ -42,13 +44,13 @@ def CV_n_chunks(predictors,target,N=2):
     return iters
 
 def CV_manual(train_pred,train_targ,test_pred=None,test_targ=None):
-    
+    """Separate training and test datasets are passed manually."""
     if test_pred is None or test_targ is None:
         raise(ValueError('Both test_pred and test_targ must be specified when using CV_manual'))
     return [[train_pred,train_targ,test_pred,test_targ]]
 
 def log_regression_model(X_train,y_train,X_test,**model_kwargs):
-    
+    """A wrapper around sklearn's *LogisticRegression* class, which accepts the same *model_kwargs*"""
     LR=LogisticRegression(**model_kwargs)
     LR=LR.fit(X_train,y_train)
     
@@ -57,7 +59,7 @@ def log_regression_model(X_train,y_train,X_test,**model_kwargs):
     return LR,det_pred,prob_pred
 
 def blank_score(det_pred,prob_pred,target,**score_kwargs):
-    
+    """@private"""
     if det_pred is not None:
         assert det_pred.shape[0]==target.shape[0]
     if prob_pred is not None:
@@ -65,7 +67,7 @@ def blank_score(det_pred,prob_pred,target,**score_kwargs):
     return len(target)
 
 def ROC_AUC(det_pred,prob_pred,target,**score_kwargs):
-    
+    """Computes the ROC AUC score, as implemented in sklearn, and accepting the same *score_kwargs*"""
     #No ROC_AUC for a variable with only one value
     if len(np.unique(target))==1:
         return np.nan
@@ -83,34 +85,46 @@ class PredictionTest(object):
     **Arguments**
     
     *predictors*
+    
     An xarray Dataset of scalar predictors
     
     *predictand*
+    
     An xarray DataArray with a shared coord to *predictors*.
     """
     def __init__(self,predictors,predictand,tolerate_empty_variables=False):
+        """Initialise a PredictionTest object"""
         
         self.predictand=self._predictand_to_dataarray(predictand)
-        self.predictors=self._predictors_to_dataset(predictors)
+        """@private"""
         
+        self.predictors=self._predictors_to_dataset(predictors)
+        """@private"""
+
         
         self.predefined_models=dict(
             logregression=log_regression_model
         )
+        """@private"""
         
         self.predefined_cv_methods=dict(
             nchunks=CV_n_chunks,
             drop_year=CV_drop1year,
             manual=CV_manual
         )
+        """@private"""
         
         self.predefined_scores=dict(
             sklearn_roc_auc=ROC_AUC,
             test=blank_score
         )
+        """@private"""
+        
         self.computed_scores=None
+        """@private"""
         
         self.tol_empty=tolerate_empty_variables
+        """@private"""
         return
     
     def __repr__(self):
@@ -139,48 +153,67 @@ class PredictionTest(object):
         **Arguments**
         
         *model*
+        
         A function with the following signature:
-            Input: Three numpy arrays of shape [T1,N], [T1], [T2,N] (train_predictors, train_target, and test_predictors respectively), and an arbitrary number of keyword arguments.
-            Output: *model* (A scikit-learn-like fitted model object),*det_pred* (a numpy array of shape [T2] with deterministic predictions) and *prob_pred* (a numpy array of shape [T2,M] with probabilistic predictions, where M is the number of unique values in *train_target* and each element predicts the probability of a given class). Any output can instead be replaced with None, but at least one of *det_pred* and *prob_pred* must not be None.
+        
+        Input: Three numpy arrays of shape [T1,N], [T1], [T2,N] (train_predictors, train_target, and test_predictors respectively), and an arbitrary number of keyword arguments.
+        
+        Output: *model* (A scikit-learn-like fitted model object),*det_pred* (a numpy array of shape [T2] with deterministic predictions) and *prob_pred* (a numpy array of shape [T2,M] with probabilistic predictions, where M is the number of unique values in *train_target* and each element predicts the probability of a given class). Any output can instead be replaced with None, but at least one of *det_pred* and *prob_pred* must not be None.
             
         **Optional arguments**
         
         *score*
-            A string specifying a predefined skill score (currently only 'sklearn_roc_auc') or a function with the signature:
-            Input: det_pred (a numpy array of shape [T2]), prob_pred (a numpy array of shape [T2,M], a truth series (a numpy array of shape [T2]), and an arbitrary number of keyword arguments.
-            Output: a scalar skill score.
+        
+        A string specifying a predefined skill score (currently only 'sklearn_roc_auc') or a function with the signature:
+        
+        Input: det_pred (a numpy array of shape [T2]), prob_pred (a numpy array of shape [T2,M], a truth series (a numpy array of shape [T2]), and an arbitrary number of keyword arguments.
+        Output: a scalar skill score.
             
         *cv_method*
-            A string specifying a predefined cross-validation method, a custom cross-validation function with corresponding signature, or None, in which case no cross-validation is used (the training and test datasets are the same). Predefined cross-validation methods are:
-                *nchunks* - Divide the dataset into *n* chunks, using each as the test dataset predicted by the other *n*-1 chunks, to produce *n* total skill estimates. *n* defaults to 2, and is specified in *cv_kwargs*
-                *drop_year* - Split the dataset by calendar year, using each year as the test dataset predicted by the remaining years.
-                *manual* - Treat *predictors* and *predictand* as training data. Test data must be passed explicitly via *cv_kwargs* as *test_pred* and *test_targ*.
-            If a custom function is passed it must have the following signature:
-            Input: predictors (a Dataset), target (a DataArray), and an arbitrary number of keyword arguments.
-            Output: A train predictor Dataset, a train target DatArray, a test predictor Dataset, and a test target DataArray.
+        A string specifying a predefined cross-validation method, a custom cross-validation function with corresponding signature, or None, in which case no cross-validation is used (the training and test datasets are the same). Predefined cross-validation methods are:
+        
+        *nchunks* - Divide the dataset into *n* chunks, using each as the test dataset predicted by the other *n*-1 chunks, to produce *n* total skill estimates. *n* defaults to 2, and is specified in *cv_kwargs*
+        
+        *drop_year* - Split the dataset by calendar year, using each year as the test dataset predicted by the remaining years.
+        *manual* - Treat *predictors* and *predictand* as training data. Test data must be passed explicitly via *cv_kwargs* as *test_pred* and *test_targ*.
+        
+        If a custom function is passed it must have the following signature:
+        Input: predictors (a Dataset), target (a DataArray), and an arbitrary number of keyword arguments.
+        
+        Output: A train predictor Dataset, a train target DatArray, a test predictor Dataset, and a test target DataArray.
 
         *predictor_variables*
-            If 'univariate' all variables in *PredictionTest.predictors* are used individually to predict *PredictionTest.predictand*.
-            If 'all' all variables in *PredictionTest.predictors* are used collectively to predict *PredictionTest.predictand*.
-            If a 1D array of variable names in *PredictionTest.predictors*, each specified variable is used individually to predict *PredictionTest.predictand*.
-            If a 2D array of iterables over variable names in *PredictionTest.predictors*, each specified combination of variables is used to predict *PredictionTest.predictand*.
+        
+        If 'univariate' all variables in *PredictionTest.predictors* are used individually to predict *PredictionTest.predictand*.
+        
+        If 'all' all variables in *PredictionTest.predictors* are used collectively to predict *PredictionTest.predictand*.
+        
+        If a 1D array of variable names in *PredictionTest.predictors*, each specified variable is used individually to predict *PredictionTest.predictand*.
+        
+        If a 2D array of iterables over variable names in *PredictionTest.predictors*, each specified combination of variables is used to predict *PredictionTest.predictand*.
             
         *keep_models*
-            If True, a dictionary of arrays of fitted models is returned, corresponding to each variable combination and cross validated model that was computed.
+        If True, a dictionary of arrays of fitted models is returned, corresponding to each variable combination and cross validated model that was computed.
         
         *model_kwargs*
-            A dictionary of keyword arguments to pass to *model*
+        
+        A dictionary of keyword arguments to pass to *model*
         *cv_kwargs*
-            A dictionary of keyword arguments to pass to *cv_method*
+        
+        A dictionary of keyword arguments to pass to *cv_method*
 
         *score_kwargs*
-            A dictionary of keyword arguments to pass to *score*
+        
+        A dictionary of keyword arguments to pass to *score*
         
         **Returns**
+        
         If keep_models is False:
+        
         returns *score_da*, a Dataset of skill scores for each prediction experiment, with a cross_validation coordinate.
         
         if keep_models is True:
+        
         return (*score_da*,*model_da*)
         """
         if np.ndim(predictor_variables)==1:
@@ -307,19 +340,25 @@ class PredictionTest(object):
     def add_score_to_index_metadata(self,indices,label='score',raise_on_missing_var=False,reduce_func=np.nanmean):
         
         """ Annotate a Dataset of indices with computed skill scores by adding them to the attributes of each DataArray in the Dataset.
+        
         **Arguments**
         
         *indices*
+        
         *An xarray.Dataset of indices*.
         
         **Optional arguments**
         
         *label*
+        
         A string determining the name of the added attribute key.
+        
         *raise_on_missing_var*
+        
         A boolean, determining if an error is raised if not all variables present in the computed skill scores are present in the indices.
         
         *reduce_func*
+        
         The function used to reduce the 'cv' vector of skill scores to a single value. Default is the mean average, ignoring nans. To add the entire vector of scores for different cross validations, pass *reduce_func*=lambda x: x
         
         """
