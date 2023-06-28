@@ -13,14 +13,14 @@ Description-Content-Type: text/markdown
 
 ## This is a beta release. While core functionality is stable, there may be some bugs: please contact me at joshua.dorrington@kit.edu if you encounter unexpected behaviour.
 
-<img src="Imgs/domino_logo.png" alt="logo" width="100"/>
+<img src="Imgs/domino_logo.png" alt="logo" width="180"/>
 
 
 ## Documentation
 
 See our [API reference](https://github.com/joshdorrington/domino/blob/master/docbuild/domino-composite.pdf) for a full description of all functionality.
 
-[//]: # (Our preprint on Domino (under consideration at QJRMS), and its application to extreme rainfall prediction can be found [here](where))
+<!-- (Our preprint on Domino (under consideration at QJRMS), and its application to extreme rainfall prediction can be found [here](where)) -->
 
 ## Examples
 
