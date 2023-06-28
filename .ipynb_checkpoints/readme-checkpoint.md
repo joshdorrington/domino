@@ -8,7 +8,7 @@
 
 ## Documentation
 
-See our [API reference](https://github.com/joshdorrington/domino/blob/master/docbuild/domino-composite.pdf) for a full description of all functionality.
+See our [API reference](https://joshdorrington.github.io/docs/domino.html) for a full description of all functionality.
 
 <!-- (Our preprint on Domino (under consideration at QJRMS), and its application to extreme rainfall prediction can be found [here](where)) -->
 
