@@ -10,7 +10,8 @@
 
 See our [API reference](https://joshdorrington.github.io/docs/domino.html) for a full description of all functionality.
 
-<!-- (Our preprint on Domino (under consideration at QJRMS), and its application to extreme rainfall prediction can be found [here](where)) -->
+Our preprint on Domino (under consideration at QJRMS), and its application to extreme rainfall prediction can be [found 
+here](http://arxiv.org/abs/2306.16787)
 
 ## Examples
 
