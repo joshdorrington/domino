@@ -1,5 +1,5 @@
-# Domino is a package for analysing composites of atmospheric data.
-## Based on xarray, Domino makes it easy to calculate lagged composites of fields and scalar indices around categorical event time series, and to compute bootstrapped confidence bounds.
+# Domino is a package for analysing the atmospheric precursors of categorical events: meteorological or impact-based.
+## Built on top of xarray, Domino makes it easy to calculate lagged composites of fields and scalar indices around categorical event time series, to compute bootstrapped confidence bounds, to produce scalar indices of precursor activity, and to assess their predictive skill.
 
 ## This is a beta release. While core functionality is stable, there may be some bugs: please contact me at joshua.dorrington@kit.edu if you encounter unexpected behaviour.
 
