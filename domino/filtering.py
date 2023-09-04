@@ -24,7 +24,7 @@ def grid_area(da,lat_coord='lat',lon_coord='lon',r=6371):
         for lo,dlo in zip(lon,dlon)])
     area=xr.DataArray(data=areas.T,\
         coords={lat_coord:lat,lon_coord:lon})
-    return area
+    return np.abs(area)
 
 
 def apply_2d_func_to_da(da,func,*args,dims=None):

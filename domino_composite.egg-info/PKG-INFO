@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: domino-composite
-Version: 0.31
+Version: 0.32
 Summary: A package for compositing atmospheric datasets
 Home-page: https://github.com/joshdorrington/domino
 Author: Josh Dorrington
@@ -20,7 +20,8 @@ Description-Content-Type: text/markdown
 
 See our [API reference](https://joshdorrington.github.io/docs/domino.html) for a full description of all functionality.
 
-<!-- (Our preprint on Domino (under consideration at QJRMS), and its application to extreme rainfall prediction can be found [here](where)) -->
+Our preprint on Domino (under consideration at QJRMS), and its application to extreme rainfall prediction can be [found 
+here](http://arxiv.org/abs/2306.16787)
 
 ## Examples
 
