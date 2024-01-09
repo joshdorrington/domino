@@ -98,7 +98,7 @@ def holm_bonferroni_correction(pvals,alpha):
     
     return significant
 
-def event_from_datetimes(events,d1,d2,subset_dict={}):
+def event_from_datetimes(events,d1,d2,subset_dict={},freq='D'):
     #Input checking, also throws error for ragged lists
     if np.all(np.array([np.ndim(e) for e in events])==0):
         events=[events]
@@ -111,7 +111,7 @@ def event_from_datetimes(events,d1,d2,subset_dict={}):
         raise(ValueError('2 events on the same day not supported.'))
     
     #Meat of the function
-    daterange=pd.date_range(d1,d2)
+    daterange=pd.date_range(d1,d2,freq=freq)
     for k,x in subset_dict.items():
         daterange=daterange[np.isin(getattr(daterange,k),x)]  
     event_index=np.zeros(len(daterange))
