@@ -117,7 +117,7 @@ def event_from_datetimes(events,d1,d2,subset_dict={},freq='D'):
         daterange=daterange[np.isin(getattr(daterange,k),x)]  
     event_index=np.zeros(len(daterange))
     for i,e in enumerate(events):
-        event_index[np.isin(daterange.to_list(),e)]=i+1
+        event_index[np.isin(pd.DatetimeIndex(daterange.to_list()),pd.DatetimeIndex(e))]=i+1
     event_index=xr.DataArray(data=event_index,coords={'time':daterange})
     return event_index
 
