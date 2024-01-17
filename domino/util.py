@@ -3,6 +3,7 @@ import datetime as dt
 import numpy as np
 import xarray as xr
 import itertools
+import cftime
 
 def squeeze_da(da):  
     """ Remove length 1 coords from a DataArray"""
