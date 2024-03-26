@@ -23,15 +23,21 @@ def make_all_dims_coords(da):
 def is_time_type(x):
     return (isinstance(x,dt.date) or isinstance(x,np.datetime64))
 
-def offset_time_dim(da,offset,offset_unit='days',offset_dim='time',deep=False):#
+def offset_time_dim(da,offset,offset_unit='days',offset_dim='step',deep=False,is_timedelta_dim=False):
     """Shifts the time-like *offset_dim* coord of *da* by *offset* *offset_units*.
     
     e.g. offset_time_dim(da,3,'days'), adds three days to the time axis of da."""
     
     time_offset=dt.timedelta(**{offset_unit:offset})
     
+    if is_timedelta_dim:
+        convert_func=pd.to_timedelta
+    else:
+        convert_func=pd.to_datetime
+        
     #rewritten to handle older pandas versions that don't play nicely with dataarrays
-    offset_dim_vals=pd.to_datetime(da[offset_dim].values)+time_offset
+    offset_dim_vals=convert_func(da[offset_dim].values)+time_offset
+    
     new_da=da.copy(deep=deep)
     new_da=new_da.assign_coords({offset_dim:offset_dim_vals})
     
