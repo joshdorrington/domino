@@ -1,7 +1,7 @@
 # Domino is a package for analysing the atmospheric precursors of categorical events: meteorological or impact-based.
 ## Built on top of xarray, Domino makes it easy to calculate lagged composites of fields and scalar indices around categorical event time series, to compute bootstrapped confidence bounds, to produce scalar indices of precursor activity, and to assess their predictive skill.
 
-## This is a beta release. While core functionality is stable, there may be some bugs: please contact me at joshua.dorrington@kit.edu if you encounter unexpected behaviour.
+## This is a beta release. While core functionality is stable, there may be some bugs: please contact me at joshua.dorrington@uib.no if you encounter unexpected behaviour.
 
 <img src="Imgs/domino_logo.png" alt="logo" width="180"/>
 
@@ -10,8 +10,7 @@
 
 See our [API reference](https://joshdorrington.github.io/docs/domino.html) for a full description of all functionality.
 
-Our preprint on Domino (under consideration at QJRMS), and its application to extreme rainfall prediction can be [found 
-here](http://arxiv.org/abs/2306.16787)
+Our paper on Domino and its application to extreme rainfall prediction has been published in QJRMS and can be [found here](https://doi.org/10.1002/qj.4622)
 
 ## Examples
 
@@ -29,3 +28,8 @@ domino can be installed using pip:
 python -m pip install domino-composite
 ```
 If you want to run the worked examples in the Jupyter notebooks you will need to download the [netcdf files containing example data](https://github.com/joshdorrington/domino/releases/tag/v1-data).
+
+## Related papers using Domino or its precursor output:
+
+* [Precursors and pathways: dynamically informed extreme event forecasting demonstrated on the historic Emilia-Romagna 2023 flood](https://doi.org/10.5194/nhess-24-2995-2024)
+* [Improving forecasts of precipitation extremes over northern and central Italy using machine learning](https://doi.org/10.1002/qj.4755)
