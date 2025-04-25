@@ -30,6 +30,7 @@ python -m pip install domino-composite
 If you want to run the worked examples in the Jupyter notebooks you will need to download the [netcdf files containing example data](https://github.com/joshdorrington/domino/releases/tag/v1-data).
 
 ## Related papers using Domino or its precursor output:
-
+* [Domino: A new framework for the automated identification of weather event precursors, demonstrated for European extreme rainfall](https://doi.org/10.1002/qj.4622)
 * [Precursors and pathways: dynamically informed extreme event forecasting demonstrated on the historic Emilia-Romagna 2023 flood](https://doi.org/10.5194/nhess-24-2995-2024)
 * [Improving forecasts of precipitation extremes over northern and central Italy using machine learning](https://doi.org/10.1002/qj.4755)
+* [15-day near-realtime precursors in the ECMWF forecast](https://joshdorrington.github.io/DominoWeb/s2s_forecast.html)
